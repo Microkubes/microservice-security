@@ -124,3 +124,12 @@ func NewSecurityChain() SecurityChain {
 		MiddlewareList: middlewareList,
 	}
 }
+
+// AsSecurityMiddleware wraps a SecurityChain into a SecurityChainMiddleware which later
+// can be used as part of another SecurityChain.
+func AsSecurityMiddleware(chain SecurityChain) SecurityChainMiddleware {
+	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, error) {
+		c, rw, _, err := chain.Execute(ctx, rw, req)
+		return c, rw, err
+	}
+}

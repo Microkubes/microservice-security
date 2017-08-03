@@ -18,17 +18,17 @@ func TestContextPassing(t *testing.T) {
 	})
 
 	if ctx == modCtx {
-		panic("Context should be changed")
+		t.Fatal("Context should be changed")
 	}
 
 	v := ctx.Value(key)
 	if v != nil {
-		panic("Should be empty")
+		t.Fatal("Should be empty")
 	}
 
 	v = modCtx.Value(key)
 	if v == nil {
-		panic("There should be a value in the modified context")
+		t.Fatal("There should be a value in the modified context")
 	}
 }
 
@@ -40,7 +40,7 @@ func TestNewSecurityChain(t *testing.T) {
 	chain := NewSecurityChain()
 
 	if chain == nil {
-		panic("A new SecuirityChain was expected.")
+		t.Fatal("A new SecuirityChain was expected.")
 	}
 }
 
@@ -54,7 +54,7 @@ func TestAddMiddleware(t *testing.T) {
 	})
 
 	if len(chain.MiddlewareList) == 0 {
-		panic("Excpected to add the SecurityChainMiddleware.")
+		t.Fatal("Excpected to add the SecurityChainMiddleware.")
 	}
 }
 
@@ -72,10 +72,10 @@ func TestAddMiddlewareType(t *testing.T) {
 	_, err := chain.AddMiddlewareType("test")
 
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	if len(chain.MiddlewareList) == 0 {
-		panic("Excpected to add the SecurityChainMiddleware.")
+		t.Fatal("Excpected to add the SecurityChainMiddleware.")
 	}
 }
 
@@ -160,5 +160,36 @@ func TestGetSecurityBuilder(t *testing.T) {
 	}
 	if builder == nil {
 		t.Fatal("Expected a non-nil builder")
+	}
+}
+
+func TestAsSecurityMiddleware(t *testing.T) {
+	innerChain := &Chain{
+		MiddlewareList: []SecurityChainMiddleware{},
+	}
+	parentChain := &Chain{
+		MiddlewareList: []SecurityChainMiddleware{},
+	}
+
+	innerMiddlewareCalled := false
+
+	innerMiddleware := func(c context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, error) {
+		innerMiddlewareCalled = true
+		return c, rw, nil
+	}
+	innerChain.MiddlewareList = append(innerChain.MiddlewareList, innerMiddleware)
+
+	wrappedChainMiddleware := AsSecurityMiddleware(innerChain)
+
+	if wrappedChainMiddleware == nil {
+		t.Fatal("Expected to have wrapped the chain in a middleware")
+	}
+
+	parentChain.MiddlewareList = append(parentChain.MiddlewareList, wrappedChainMiddleware)
+
+	parentChain.Execute(context.Background(), nil, nil)
+
+	if !innerMiddlewareCalled {
+		t.Fatal("Expected the middleware in the inner security chain to be called.")
 	}
 }
