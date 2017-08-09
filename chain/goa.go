@@ -49,6 +49,11 @@ func FromGoaMiddleware(middleware goa.Middleware) SecurityChainMiddleware {
 	}
 }
 
+// ToSecurityChainMiddleware wraps a goa.Middleware into SecurityChainMiddleware. The middleware represents
+// a specific security mechanism middleware specified by the securityType parameter.
+// When executing this middleware, if the middleware retuns an error, the error is NOT propagated
+// down the chain, but instead is set in the auth.SecurityContext in the SecurityErrors map under
+// securityType.
 func ToSecurityChainMiddleware(securityType string, middleware goa.Middleware) SecurityChainMiddleware {
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, error) {
 		pCtx := ctx
