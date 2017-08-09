@@ -81,6 +81,18 @@ func SomeCustomGoaMiddleware(hnd goa.Handler) goa.Handler {
 }
 ```
 
+# SecurityContext
+
+This structure holds the value of the Authentication and any possible errors in
+the request context.
+The API for manipulating the security context consists of:
+
+ * ```GetSecurityContext``` - returns the SecurityContext from the current request context. If the context does not
+ contain a security context yet, a nil is returned.
+ * ```GetSecurityErrors``` - returns the SecurityErrors map from the security context.
+ * ```SetSecurityError``` - sets an error for a particular security mechanism. There is only one error per mechanism.
+
+
 # Security Chain
 
 SecurityChain is a standard chain of processing of the incoming http request. It is intended to be
