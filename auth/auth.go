@@ -19,8 +19,12 @@ type Auth struct {
 	Organizations []string
 }
 
+// SecurityErrors holds the errors generated during validation of the request with a
+// specific security mechanism (ex. JWT, SAML, OAuth2).
 type SecurityErrors map[string]interface{}
 
+// SecurityContext holds pointer to the Auth object and a SecurityErrors.
+// It is created for each request and is kept in the context.Context for that request.
 type SecurityContext struct {
 	*Auth
 	Errors SecurityErrors
@@ -69,6 +73,8 @@ func ClearSecurityContext(ctx context.Context) context.Context {
 	return context.WithValue(ctx, SecurityContextKey, nil)
 }
 
+// GetSecurityContext returns the SecurityContext from the given context.
+// If not found, it returns nil.
 func GetSecurityContext(ctx context.Context) *SecurityContext {
 	sc, ok := ctx.Value(SecurityContextKey).(*SecurityContext)
 	if !ok {
@@ -77,6 +83,9 @@ func GetSecurityContext(ctx context.Context) *SecurityContext {
 	return sc
 }
 
+// GetSecurityErrors returns the SecurityErrors map from the SecurityContext in the
+// given context.
+// If no SecurityContext exists in the current context, it returns nil.
 func GetSecurityErrors(ctx context.Context) *SecurityErrors {
 	sc := GetSecurityContext(ctx)
 	if sc == nil {
@@ -85,6 +94,8 @@ func GetSecurityErrors(ctx context.Context) *SecurityErrors {
 	return &sc.Errors
 }
 
+// SetSecurityError sets an error for the given security type in the SecurityContext.
+// If there is no SecurityContext in the given context, a new one is created implicitly.
 func SetSecurityError(ctx context.Context, secType string, err interface{}) context.Context {
 	sc, ok := ctx.Value(SecurityContextKey).(*SecurityContext)
 	if !ok {

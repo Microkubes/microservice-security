@@ -20,6 +20,9 @@ import (
 // JWTSecurityType is the name of the JWT security type
 const JWTSecurityType = "JWT"
 
+// NewKeyResolver creates a simple key resolver for the JWT middleware. It loads
+// the public keys from a specified directory (path). The public key files
+// MUST end in *.pub .
 func NewKeyResolver(path string) (goajwt.KeyResolver, error) {
 	keys, err := LoadJWTPublicKeys(path)
 	if err != nil {
@@ -28,6 +31,11 @@ func NewKeyResolver(path string) (goajwt.KeyResolver, error) {
 	return goajwt.NewSimpleResolver(keys), nil
 }
 
+// NewJWTSecurityMiddleware creates a new chain.SecurityChainMiddleware with a given KeyResolver and
+// JWTSecurity configuration.
+// As resolver you may pass the simple key resolver created with NewKeyResolver or you may pass a more
+// sophisticated key-resolver.
+// The scheme is obtained from the generated Goadesign JWT security.
 func NewJWTSecurityMiddleware(resolver goajwt.KeyResolver, scheme *goa.JWTSecurity) chain.SecurityChainMiddleware {
 	goaMiddleware := goajwt.New(resolver, func(handler goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
@@ -72,6 +80,9 @@ func NewJWTSecurityMiddleware(resolver goajwt.KeyResolver, scheme *goa.JWTSecuri
 	return chain.ToSecurityChainMiddleware(JWTSecurityType, goaMiddleware)
 }
 
+// NewJWTSecurity creates a JWT SecurityChainMiddleware using a simple key resolver
+// that loads the public keys from the keysDir. The key files must end in *.pub.
+// The scheme is obtained from the generated Goadesign JWT security.
 func NewJWTSecurity(keysDir string, scheme *goa.JWTSecurity) chain.SecurityChainMiddleware {
 	resolver, err := NewKeyResolver(keysDir)
 	if err != nil {
