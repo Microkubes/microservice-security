@@ -9,7 +9,12 @@ import (
 func TestGetAuth(t *testing.T) {
 	ctx := context.Background()
 	auth := &Auth{}
-	ctx = context.WithValue(ctx, ContextAuthKey, auth)
+
+	sc := &SecurityContext{
+		Auth: auth,
+	}
+
+	ctx = context.WithValue(ctx, SecurityContextKey, sc)
 
 	authInContext := GetAuth(ctx)
 
@@ -25,7 +30,12 @@ func TestGetAuth(t *testing.T) {
 func TestHasContext_Yes(t *testing.T) {
 	ctx := context.Background()
 	auth := &Auth{}
-	ctx = context.WithValue(ctx, ContextAuthKey, auth)
+
+	sc := &SecurityContext{
+		Auth: auth,
+	}
+
+	ctx = context.WithValue(ctx, SecurityContextKey, sc)
 
 	hasAuth := HasAuth(ctx)
 
@@ -50,28 +60,30 @@ func TestSetAuth(t *testing.T) {
 
 	ctx = SetAuth(ctx, auth)
 
-	authInContext := ctx.Value(ContextAuthKey)
+	sc := ctx.Value(SecurityContextKey).(*SecurityContext)
 
-	if authInContext == nil {
-		panic("Expected the auth to be set in context.")
+	if sc == nil {
+		panic("Expected SecurityContext to be set in context.")
 	}
-
-	if authInContext != auth {
+	if sc.Auth == nil {
+		panic("Expected to have Auth in SecurityContext")
+	}
+	if sc.Auth != auth {
 		panic("Expected to set the pointer to the same auth object.")
 	}
 }
 
-func TestClearAuth(t *testing.T) {
+func TestClearContext(t *testing.T) {
 	ctx := context.Background()
-	auth := &Auth{}
+	sc := &SecurityContext{}
 
-	ctx = context.WithValue(ctx, ContextAuthKey, auth)
+	ctx = context.WithValue(ctx, SecurityContextKey, sc)
 
-	ctx = ClearAuth(ctx)
+	ctx = ClearSecurityContext(ctx)
 
-	authInContext := ctx.Value(ContextAuthKey)
+	scInContext := ctx.Value(SecurityContextKey)
 
-	if authInContext != nil {
+	if scInContext != nil {
 		panic("Expected NOT to find the auth object in context")
 	}
 }
