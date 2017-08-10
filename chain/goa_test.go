@@ -1,9 +1,11 @@
 package chain
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
+	"github.com/JormungandrK/microservice-security/auth"
 	"github.com/goadesign/goa"
 
 	"context"
@@ -59,5 +61,25 @@ func TestFromGoaMiddleware(t *testing.T) {
 	if ctx.Value(key) != "test-val" {
 		t.Fatal("Expected to have the custom value set in context.")
 	}
+}
 
+func TestToSecurityChainMiddleware(t *testing.T) {
+	goaMiddleware := func(hnd goa.Handler) goa.Handler {
+		return func(c context.Context, rw http.ResponseWriter, req *http.Request) error {
+			return fmt.Errorf("Validation Error")
+		}
+	}
+	chain := NewSecurityChain().AddMiddleware(ToSecurityChainMiddleware("TEST", goaMiddleware))
+
+	ctx, _, _, err := chain.Execute(context.Background(), nil, nil)
+	if err != nil {
+		t.Fatal("Expected NOT get errors during chain execute.")
+	}
+	errors := auth.GetSecurityErrors(ctx)
+	if errors == nil {
+		t.Fatal("Expected to get security errors")
+	}
+	if _, ok := (*errors)["TEST"]; !ok {
+		t.Fatal("Expected to get an error for TEST security middleware.")
+	}
 }

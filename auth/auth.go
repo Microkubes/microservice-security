@@ -19,21 +19,32 @@ type Auth struct {
 	Organizations []string
 }
 
+// SecurityErrors holds the errors generated during validation of the request with a
+// specific security mechanism (ex. JWT, SAML, OAuth2).
+type SecurityErrors map[string]interface{}
+
+// SecurityContext holds pointer to the Auth object and a SecurityErrors.
+// It is created for each request and is kept in the context.Context for that request.
+type SecurityContext struct {
+	*Auth
+	Errors SecurityErrors
+}
+
 type key string
 
 const (
-	// ContextAuthKey is the context key under which the Auth object is stored in context.Context.
-	ContextAuthKey key = "security-auth"
+	// SecurityContextKey is the context key under which the SecurityContext object is stored in context.Context.
+	SecurityContextKey key = "security-context"
 )
 
 // GetAuth retrieves the Auth object from the given context.Context.
 // Returns a pointer to the Auth context or nil if no Auth is present in the context.
 func GetAuth(ctx context.Context) *Auth {
-	auth, ok := ctx.Value(ContextAuthKey).(*Auth)
+	result, ok := ctx.Value(SecurityContextKey).(*SecurityContext)
 	if !ok {
 		return nil
 	}
-	return auth
+	return result.Auth
 }
 
 // HasAuth checks for existence of Auth object in the given context.Context.
@@ -45,11 +56,56 @@ func HasAuth(ctx context.Context) bool {
 // SetAuth sets the pointer to the Auth object in the context.
 // Returns context.Context that contains the Auth object.
 func SetAuth(ctx context.Context, auth *Auth) context.Context {
-	return context.WithValue(ctx, ContextAuthKey, auth)
+	secContext, ok := ctx.Value(SecurityContextKey).(*SecurityContext)
+	if !ok {
+		errors := make(SecurityErrors)
+		secContext = &SecurityContext{
+			Errors: errors,
+		}
+	}
+	secContext.Auth = auth
+	return context.WithValue(ctx, SecurityContextKey, secContext)
 }
 
-// ClearAuth removes the Auth object from the context.
-// Returns a context.Context that does not have a pointer to the Auth object.
-func ClearAuth(ctx context.Context) context.Context {
-	return context.WithValue(ctx, ContextAuthKey, nil)
+// ClearSecurityContext removes the SecurityContext object from the context.
+// Returns a context.Context that does not have a pointer to the SecurityContext object.
+func ClearSecurityContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, SecurityContextKey, nil)
+}
+
+// GetSecurityContext returns the SecurityContext from the given context.
+// If not found, it returns nil.
+func GetSecurityContext(ctx context.Context) *SecurityContext {
+	sc, ok := ctx.Value(SecurityContextKey).(*SecurityContext)
+	if !ok {
+		return nil
+	}
+	return sc
+}
+
+// GetSecurityErrors returns the SecurityErrors map from the SecurityContext in the
+// given context.
+// If no SecurityContext exists in the current context, it returns nil.
+func GetSecurityErrors(ctx context.Context) *SecurityErrors {
+	sc := GetSecurityContext(ctx)
+	if sc == nil {
+		return nil
+	}
+	return &sc.Errors
+}
+
+// SetSecurityError sets an error for the given security type in the SecurityContext.
+// If there is no SecurityContext in the given context, a new one is created implicitly.
+func SetSecurityError(ctx context.Context, secType string, err interface{}) context.Context {
+	sc, ok := ctx.Value(SecurityContextKey).(*SecurityContext)
+	if !ok {
+		sc = &SecurityContext{
+			Errors: make(SecurityErrors),
+		}
+		ctx = context.WithValue(ctx, SecurityContextKey, sc)
+	}
+
+	sc.Errors[secType] = err
+
+	return ctx
 }

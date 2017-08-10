@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"testing"
 
 	"context"
@@ -9,28 +10,38 @@ import (
 func TestGetAuth(t *testing.T) {
 	ctx := context.Background()
 	auth := &Auth{}
-	ctx = context.WithValue(ctx, ContextAuthKey, auth)
+
+	sc := &SecurityContext{
+		Auth: auth,
+	}
+
+	ctx = context.WithValue(ctx, SecurityContextKey, sc)
 
 	authInContext := GetAuth(ctx)
 
 	if authInContext == nil {
-		panic("Auth object was expected")
+		t.Fatal("Auth object was expected")
 	}
 
 	if authInContext != auth {
-		panic("Expected to have the pointer to the same Auth object")
+		t.Fatal("Expected to have the pointer to the same Auth object")
 	}
 }
 
 func TestHasContext_Yes(t *testing.T) {
 	ctx := context.Background()
 	auth := &Auth{}
-	ctx = context.WithValue(ctx, ContextAuthKey, auth)
+
+	sc := &SecurityContext{
+		Auth: auth,
+	}
+
+	ctx = context.WithValue(ctx, SecurityContextKey, sc)
 
 	hasAuth := HasAuth(ctx)
 
 	if !hasAuth {
-		panic("Expected to have Auth object in context")
+		t.Fatal("Expected to have Auth object in context")
 	}
 }
 
@@ -40,7 +51,7 @@ func TestHasContext_Nope(t *testing.T) {
 	hasAuth := HasAuth(ctx)
 
 	if hasAuth {
-		panic("Expected NOT to have Auth object in context")
+		t.Fatal("Expected NOT to have Auth object in context")
 	}
 }
 
@@ -50,28 +61,78 @@ func TestSetAuth(t *testing.T) {
 
 	ctx = SetAuth(ctx, auth)
 
-	authInContext := ctx.Value(ContextAuthKey)
+	sc := ctx.Value(SecurityContextKey).(*SecurityContext)
 
-	if authInContext == nil {
-		panic("Expected the auth to be set in context.")
+	if sc == nil {
+		t.Fatal("Expected SecurityContext to be set in context.")
 	}
-
-	if authInContext != auth {
-		panic("Expected to set the pointer to the same auth object.")
+	if sc.Auth == nil {
+		t.Fatal("Expected to have Auth in SecurityContext")
+	}
+	if sc.Auth != auth {
+		t.Fatal("Expected to set the pointer to the same auth object.")
 	}
 }
 
-func TestClearAuth(t *testing.T) {
+func TestClearContext(t *testing.T) {
 	ctx := context.Background()
-	auth := &Auth{}
+	sc := &SecurityContext{}
 
-	ctx = context.WithValue(ctx, ContextAuthKey, auth)
+	ctx = context.WithValue(ctx, SecurityContextKey, sc)
 
-	ctx = ClearAuth(ctx)
+	ctx = ClearSecurityContext(ctx)
 
-	authInContext := ctx.Value(ContextAuthKey)
+	scInContext := ctx.Value(SecurityContextKey)
 
-	if authInContext != nil {
-		panic("Expected NOT to find the auth object in context")
+	if scInContext != nil {
+		t.Fatal("Expected NOT to find the auth object in context")
+	}
+}
+
+func TestGetSecurityContext(t *testing.T) {
+	ctx := context.Background()
+	sc := &SecurityContext{}
+
+	ctx = context.WithValue(ctx, SecurityContextKey, sc)
+
+	scInContext := GetSecurityContext(ctx)
+
+	if scInContext == nil {
+		t.Fatal("SecurityContext was expected")
+	}
+}
+
+func TestGetSecurityErrors(t *testing.T) {
+	ctx := context.Background()
+	sc := &SecurityContext{}
+
+	ctx = context.WithValue(ctx, SecurityContextKey, sc)
+
+	sc.Errors = make(SecurityErrors)
+
+	sc.Errors["JWT"] = fmt.Errorf("Some failure")
+
+	errors := GetSecurityErrors(ctx)
+
+	if errors == nil {
+		t.Fatal("Expected to find security errors map")
+	}
+
+	if _, ok := (*errors)["JWT"]; !ok {
+		t.Fatal("Expected to find JWT error in context.")
+	}
+}
+
+func TestSetSecurityError(t *testing.T) {
+	ctx := context.Background()
+
+	ctx = SetSecurityError(ctx, "JWT", fmt.Errorf("JWT Error"))
+
+	sc, ok := ctx.Value(SecurityContextKey).(*SecurityContext)
+	if !ok {
+		t.Fatal("Expected to find security context")
+	}
+	if _, ok := sc.Errors["JWT"]; !ok {
+		t.Fatal("Expected to find a JWT error.")
 	}
 }
