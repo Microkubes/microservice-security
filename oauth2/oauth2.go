@@ -3,92 +3,242 @@ package oauth2
 import (
 	"context"
 	"net/http"
+	"sort"
 	"strings"
-	"sync"
+	"fmt"
+	"reflect"
 
 	"github.com/JormungandrK/microservice-security/chain"
 	"github.com/JormungandrK/microservice-security/auth"
 	"github.com/goadesign/goa"
+	jwt "github.com/dgrijalva/jwt-go"
+	jormungandrJwt "github.com/JormungandrK/microservice-security/jwt"
+	goaJwt "github.com/goadesign/goa/middleware/security/jwt"
+
+	"crypto/ecdsa"
+	"crypto/rsa"
 )
 
 // OAUTH2SecurityType is the name of the security type (JWT, OAUTH2, SAML...)
-const OAUTH2SecurityType = "OAUTH2"
+const OAuth2SecurityType = "OAuth2"
 
-type TokenMedia struct {
-	AccessToken   string
-	UserID        string
-	UserName      string
-	Roles         []string
-	Organizations []string
-}
-
-type Oauth2Repository interface {
-	GetToken(token string) (*TokenMedia, error)
-}
-
-func NewOAuth2Security(db Oauth2Repository) chain.SecurityChainMiddleware {
-	goaMiddleware := NewOAuth2SecurityMiddleware(db)
-	return chain.ToSecurityChainMiddleware(OAUTH2SecurityType, goaMiddleware)
+func NewOAuth2Security(keysDir string, scheme *goa.OAuth2Security) chain.SecurityChainMiddleware {
+	resolver, err := jormungandrJwt.NewKeyResolver(keysDir)
+	if err != nil {
+		panic(err)
+	}
+	goaMiddleware := NewOAuth2SecurityMiddleware(resolver, scheme)
+	return chain.ToSecurityChainMiddleware(OAuth2SecurityType, goaMiddleware)
 }
 
 // NewOAuth2Middleware creates a middleware that checks for the presence of an authorization header
 // and validates its content.
-func NewOAuth2SecurityMiddleware(db Oauth2Repository) goa.Middleware {
+// The steps taken by the middleware are:
+//
+//     1. Validate the "Bearer" token present in the "Authorization" header against the key(s)
+//     2. If scopes are defined for the action validate them against the "scopes" JWT
+//        claim
+func NewOAuth2SecurityMiddleware(resolver goaJwt.KeyResolver, scheme *goa.OAuth2Security) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-			token := req.Header["Authorization"]
-			if token == nil {
+			authorization := req.Header["Authorization"]
+			if authorization == nil {
 				return goa.ErrUnauthorized("missing auth header")
 			}
-			tok := token[0]
-			if len(tok) < 9 || !strings.HasPrefix(tok, "Bearer ") {
+			tokenHeader := authorization[0]
+			if len(tokenHeader) < 9 || !strings.HasPrefix(tokenHeader, "Bearer ") {
 				return goa.ErrUnauthorized("invalid auth header")
 			}
-			tok = tok[7:]
+			tokenHeader = tokenHeader[7:]
 
-			// Validate token here against value stored in DB for example
-			// if tok != TheAccessToken {
-			// 	return ErrUnauthorized("invalid token")
-			// }
+			rsaKeys, ecdsaKeys, hmacKeys := partitionKeys(resolver.SelectKeys(req))
+
+			var (
+				token     *jwt.Token
+				err       error
+				validated = false
+			)
+
+			if len(rsaKeys) > 0 {
+				token, err = validateRSAKeys(rsaKeys, "RS", tokenHeader)
+				if err == nil {
+					validated = true
+				}
+			}
+
+
+			if !validated && len(ecdsaKeys) > 0 {
+				token, err = validateECDSAKeys(ecdsaKeys, "ES", tokenHeader)
+				if err == nil {
+					validated = true
+				}
+			}
+
+			if !validated && len(hmacKeys) > 0 {
+				token, err = validateHMACKeys(hmacKeys, "HS", tokenHeader)
+				if err == nil {
+					validated = true
+				}
+			}
+
+			if !validated {
+				return goaJwt.ErrJWTError("JWT validation failed")
+			}
+
+			scopesInClaim, scopesInClaimList, err := parseClaimScopes(token)
+			if err != nil {
+				goa.LogError(ctx, err.Error())
+				return goaJwt.ErrJWTError(err)
+			}
+
+			requiredScopes := reflect.ValueOf(scheme.Scopes).MapKeys()
+
+			for _, scope := range requiredScopes {
+				if !scopesInClaim[scope.String()] {
+					msg := "authorization failed: required 'scopes' not present in JWT claim for OAuth2"
+					return goaJwt.ErrJWTError(msg, "required", requiredScopes, "scopes", scopesInClaimList)
+				}
+			}
+
+			claims := token.Claims.(jwt.MapClaims)
+
+			if _, ok := claims["username"]; !ok {
+				return jwt.NewValidationError("Username is missing", jwt.ValidationErrorClaimsInvalid)
+			}
+			if _, ok := claims["userId"]; !ok {
+				return jwt.NewValidationError("User ID is missing", jwt.ValidationErrorClaimsInvalid)
+			}
+
+			roles := []string{}
+			organizations := []string{}
+			var username string
+			var userID string
+
+			username = claims["username"].(string)
+			if _, ok := claims["userId"].(string); !ok {
+				return jwt.NewValidationError("Invalid user ID", jwt.ValidationErrorClaimsInvalid)
+			}
+			userID = claims["userId"].(string)
+
+			if rolesStr, ok := claims["roles"]; ok {
+				roles = strings.Split(rolesStr.(string), ",")
+			}
+			if organizationsStr, ok := claims["organizations"]; ok {
+				organizations = strings.Split(organizationsStr.(string), ",")
+			}
 
 			authObj := &auth.Auth{
-				Roles:         []string{"admin", "user"},
-				Organizations: []string{"org1", "org2"},
-				Username:      "test-user",
-				UserID:        "599316bbf456208abcbcc186",
+				Roles:         roles,
+				Organizations: organizations,
+				Username:      username,
+				UserID:        userID,
 			}
+
 			return h(auth.SetAuth(ctx, authObj), rw, req)
 		}
 	}
 }
 
-// DB emulates a database driver using in-memory data structures.
-type DB struct {
-	sync.Mutex
-	tokens map[string]*TokenMedia
-}
+// partitionKeys sorts keys by their type.
+func partitionKeys(keys []goaJwt.Key) ([]*rsa.PublicKey, []*ecdsa.PublicKey, [][]byte) {
+	var (
+		rsaKeys   []*rsa.PublicKey
+		ecdsaKeys []*ecdsa.PublicKey
+		hmacKeys  [][]byte
+	)
 
-// New initializes a new "DB" with dummy data.
-func NewDB() *DB {
-	tokenEntry := &TokenMedia{
-		AccessToken:   "qweqc461f9f8eb02aae053f3",
-		UserID:        "599316bbf456208abcbcc186",
-		UserName:      "test-user",
-		Roles:         []string{"admin", "user"},
-		Organizations: []string{"org1", "org2"},
+	for _, key := range keys {
+		switch k := key.(type) {
+		case *rsa.PublicKey:
+			rsaKeys = append(rsaKeys, k)
+		case *ecdsa.PublicKey:
+			ecdsaKeys = append(ecdsaKeys, k)
+		case []byte:
+			hmacKeys = append(hmacKeys, k)
+		case string:
+			hmacKeys = append(hmacKeys, []byte(k))
+		}
 	}
-	return &DB{tokens: map[string]*TokenMedia{"qweqc461f9f8eb02aae053f3": tokenEntry}}
+
+	return rsaKeys, ecdsaKeys, hmacKeys
 }
 
-// GetToken mock implementation
-func (db *DB) GetToken(token string) (*TokenMedia, error) {
-	db.Lock()
-	defer db.Unlock()
 
-	tokenEntry, ok := db.tokens[token]
+// parseClaimScopes parses the "scopes" parameter in the Claims. It supports two formats:
+//
+// * a list of string
+//
+// * a single string with space-separated scopes (akin to OAuth2's "scope").
+func parseClaimScopes(token *jwt.Token) (map[string]bool, []string, error) {
+	scopesInClaim := make(map[string]bool)
+	var scopesInClaimList []string
+	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, goa.ErrInternal("Internal error")
+		return nil, nil, fmt.Errorf("unsupported claims shape")
 	}
+	if claims["scopes"] != nil {
+		switch scopes := claims["scopes"].(type) {
+		case string:
+			for _, scope := range strings.Split(scopes, " ") {
+				scopesInClaim[scope] = true
+				scopesInClaimList = append(scopesInClaimList, scope)
+			}
+		case []interface{}:
+			for _, scope := range scopes {
+				if val, ok := scope.(string); ok {
+					scopesInClaim[val] = true
+					scopesInClaimList = append(scopesInClaimList, val)
+				}
+			}
+		default:
+			return nil, nil, fmt.Errorf("unsupported 'scopes' format in incoming JWT claim, was type %T", scopes)
+		}
+	}
+	sort.Strings(scopesInClaimList)
+	return scopesInClaim, scopesInClaimList, nil
+}
 
-	return tokenEntry, nil
+func validateRSAKeys(rsaKeys []*rsa.PublicKey, algo, incomingToken string) (token *jwt.Token, err error) {
+	for _, pubkey := range rsaKeys {
+		token, err = jwt.Parse(incomingToken, func(token *jwt.Token) (interface{}, error) {
+			if !strings.HasPrefix(token.Method.Alg(), algo) {
+				return nil, goaJwt.ErrJWTError(fmt.Sprintf("Unexpected signing method: %v", token.Header["alg"]))
+			}
+			return pubkey, nil
+		})
+		if err == nil {
+			return
+		}
+	}
+	return
+}
+
+func validateECDSAKeys(ecdsaKeys []*ecdsa.PublicKey, algo, incomingToken string) (token *jwt.Token, err error) {
+	for _, pubkey := range ecdsaKeys {
+		token, err = jwt.Parse(incomingToken, func(token *jwt.Token) (interface{}, error) {
+			if !strings.HasPrefix(token.Method.Alg(), algo) {
+				return nil, goaJwt.ErrJWTError(fmt.Sprintf("Unexpected signing method: %v", token.Header["alg"]))
+			}
+			return pubkey, nil
+		})
+		if err == nil {
+			return
+		}
+	}
+	return
+}
+
+func validateHMACKeys(hmacKeys [][]byte, algo, incomingToken string) (token *jwt.Token, err error) {
+	for _, key := range hmacKeys {
+		token, err = jwt.Parse(incomingToken, func(token *jwt.Token) (interface{}, error) {
+			if !strings.HasPrefix(token.Method.Alg(), algo) {
+				return nil, goaJwt.ErrJWTError(fmt.Sprintf("Unexpected signing method: %v", token.Header["alg"]))
+			}
+			return key, nil
+		})
+		if err == nil {
+			return
+		}
+	}
+	return
 }
