@@ -2,17 +2,17 @@ package oauth2
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"reflect"
 	"sort"
 	"strings"
-	"fmt"
-	"reflect"
 
-	"github.com/JormungandrK/microservice-security/chain"
 	"github.com/JormungandrK/microservice-security/auth"
-	"github.com/goadesign/goa"
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/JormungandrK/microservice-security/chain"
 	jormungandrJwt "github.com/JormungandrK/microservice-security/jwt"
+	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/goadesign/goa"
 	goaJwt "github.com/goadesign/goa/middleware/security/jwt"
 
 	"crypto/ecdsa"
@@ -22,6 +22,9 @@ import (
 // OAUTH2SecurityType is the name of the security type (JWT, OAUTH2, SAML...)
 const OAuth2SecurityType = "OAuth2"
 
+// NewOAuth2Security creates a OAuth2 SecurityChainMiddleware using a simple key resolver
+// that loads the public keys from the keysDir. The key files must end in *.pub.
+// The scheme is obtained from app/security.go.
 func NewOAuth2Security(keysDir string, scheme *goa.OAuth2Security) chain.SecurityChainMiddleware {
 	resolver, err := jormungandrJwt.NewKeyResolver(keysDir)
 	if err != nil {
@@ -34,10 +37,8 @@ func NewOAuth2Security(keysDir string, scheme *goa.OAuth2Security) chain.Securit
 // NewOAuth2Middleware creates a middleware that checks for the presence of an authorization header
 // and validates its content.
 // The steps taken by the middleware are:
-//
-//     1. Validate the "Bearer" token present in the "Authorization" header against the key(s)
-//     2. If scopes are defined for the action validate them against the "scopes" JWT
-//        claim
+// 1. Validate the "Bearer" token present in the "Authorization" header against the key(s)
+// 2. If scopes are defined for the action validate them against the "scopes" JWT claim
 func NewOAuth2SecurityMiddleware(resolver goaJwt.KeyResolver, scheme *goa.OAuth2Security) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
@@ -66,7 +67,6 @@ func NewOAuth2SecurityMiddleware(resolver goaJwt.KeyResolver, scheme *goa.OAuth2
 				}
 			}
 
-
 			if !validated && len(ecdsaKeys) > 0 {
 				token, err = validateECDSAKeys(ecdsaKeys, "ES", tokenHeader)
 				if err == nil {
@@ -87,7 +87,6 @@ func NewOAuth2SecurityMiddleware(resolver goaJwt.KeyResolver, scheme *goa.OAuth2
 
 			scopesInClaim, scopesInClaimList, err := parseClaimScopes(token)
 			if err != nil {
-				goa.LogError(ctx, err.Error())
 				return goaJwt.ErrJWTError(err)
 			}
 
@@ -162,7 +161,6 @@ func partitionKeys(keys []goaJwt.Key) ([]*rsa.PublicKey, []*ecdsa.PublicKey, [][
 
 	return rsaKeys, ecdsaKeys, hmacKeys
 }
-
 
 // parseClaimScopes parses the "scopes" parameter in the Claims. It supports two formats:
 //
