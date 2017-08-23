@@ -88,8 +88,7 @@ func main() {
   	// "rsa-keys" is the directory containing the RSA keys
   	// app.NewOAuth2Security() creates the OAuth2Security scheme structure
 	OAUTH2Middleware := oauth2.NewOAuth2Security("rsa-keys", app.NewOAuth2Security())
-	sc := chain.NewSecurityChain().
-					AddMiddleware(OAUTH2Middleware)
+	sc := chain.NewSecurityChain().AddMiddleware(OAUTH2Middleware)
 
     // other initializations here...
 
