@@ -5,7 +5,7 @@ This package contains functions and types for enabling OAuth2 as a security mech
 in a microservice.
 It integrates with Goa generated OAuth2 security and also as part of the SecurityChain.
 
-# Setting up a JWT security
+# Setting up a OAuth2 security
 
 There are a couple of things you need to do to enable the OAuth2 security middleware.
 For details on OAuth2 you can find many resources on the official site: https://oauth.net.
