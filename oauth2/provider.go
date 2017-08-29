@@ -12,6 +12,7 @@ import (
 )
 
 var OAuth2ErrorInvalidRedirectURI = goa.NewErrorClass("invalid_request", 400)
+var OAuth2ErrorInvalidScope = goa.NewErrorClass("invalid_scope", 400)
 var InternalServerError = goa.NewErrorClass("server_error", 500)
 var OAuth2ErrorUnauthorizedClient = goa.NewErrorClass("unauthorized_client", 401)
 var OAuth2AccessDenied = goa.NewErrorClass("access_denied", 403)
@@ -122,29 +123,9 @@ func (provider *OAuth2Provider) Exchange(clientID, code, redirectURI string) (re
 		return "", "", 0, InternalServerError("Failed to read user data", err)
 	}
 
-	accessToken, err = provider.generateAccessToken(userData)
+	oauth2Token, err := provider.generateOAuthToken(clientID, clientAuth.Scope, userData)
 	if err != nil {
-		return "", "", 0, InternalServerError("Failed to generate Access Token", err)
-	}
-
-	refreshToken, err = GenerateRandomCode(provider.RefreshTokenLength)
-	if err != nil {
-		return "", "", 0, InternalServerError("Failed to generate Refresh Token", err)
-	}
-
-	oauth2Token := OAuth2Token{
-		AccessToken:  accessToken,
-		ClientID:     clientID,
-		IssuedAt:     time.Now().Unix(),
-		RefreshToken: refreshToken,
-		Scope:        clientAuth.Scope,
-		ValidFor:     provider.AccessTokenValidityPeriod,
-	}
-
-	err = provider.TokenService.SaveToken(oauth2Token)
-
-	if err != nil {
-		return "", "", 0, InternalServerError(err)
+		return "", "", 0, InternalServerError("Failed to generate access token and refresh token", err)
 	}
 
 	err = provider.ClientService.DeleteClientAuth(clientID, code)
@@ -153,7 +134,7 @@ func (provider *OAuth2Provider) Exchange(clientID, code, redirectURI string) (re
 		return "", "", 0, InternalServerError(err)
 	}
 
-	return refreshToken, accessToken, provider.AccessTokenValidityPeriod, nil
+	return oauth2Token.RefreshToken, oauth2Token.AccessToken, oauth2Token.ValidFor, nil
 }
 
 func (provider *OAuth2Provider) generateAccessToken(userData map[string]interface{}) (string, error) {
@@ -161,12 +142,61 @@ func (provider *OAuth2Provider) generateAccessToken(userData map[string]interfac
 	if err != nil {
 		return "", err
 	}
+	// TODO: Remap JWT standard claims
 	token, err := jwt.SignToken(userData, provider.SigningMethod, key)
 	return token, err
 }
 
+func (provider *OAuth2Provider) generateOAuthToken(clientID, scope string, userData map[string]interface{}) (*OAuth2Token, error) {
+	accessToken, err := provider.generateAccessToken(userData)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := GenerateRandomCode(provider.RefreshTokenLength)
+	if err != nil {
+		return nil, err
+	}
+
+	oauth2Token := OAuth2Token{
+		AccessToken:  accessToken,
+		ClientID:     clientID,
+		IssuedAt:     time.Now().Unix(),
+		RefreshToken: refreshToken,
+		Scope:        scope,
+		ValidFor:     provider.AccessTokenValidityPeriod,
+	}
+
+	err = provider.TokenService.SaveToken(oauth2Token)
+	return &oauth2Token, err
+}
+
 func (provider *OAuth2Provider) Refresh(refreshToken, scope string) (newRefreshToken, accessToken string, expiresIn int, err error) {
-	return "", "", -1, nil
+	oauth2Token, err := provider.TokenService.GetToken(refreshToken)
+	if err != nil {
+		return "", "", 0, InternalServerError("Failed to verify refresh token", err)
+	}
+	if oauth2Token == nil {
+		return "", "", 0, OAuth2AccessDenied("Invalid refresh token")
+	}
+
+	if oauth2Token.Scope != scope {
+		return "", "", 0, OAuth2ErrorInvalidScope("invalid_scope")
+	}
+
+	userData := map[string]interface{}{}
+	err = json.Unmarshal([]byte(oauth2Token.AccessToken), &userData)
+	if err != nil {
+		return "", "", 0, InternalServerError("Failed to read the access token", err)
+	}
+
+	oauth2Token, err = provider.generateOAuthToken(oauth2Token.ClientID, oauth2Token.Scope, userData)
+
+	if err != nil {
+		return "", "", 0, InternalServerError("Failed to generate token pair", err)
+	}
+
+	return oauth2Token.RefreshToken, oauth2Token.AccessToken, oauth2Token.ValidFor, nil
 }
 
 func (provider *OAuth2Provider) Authenticate(clientID, clientSecret string) error {
