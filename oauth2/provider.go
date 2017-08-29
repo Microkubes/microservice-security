@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/JormungandrK/microservice-security/jwt"
@@ -200,6 +201,13 @@ func (provider *OAuth2Provider) Refresh(refreshToken, scope string) (newRefreshT
 }
 
 func (provider *OAuth2Provider) Authenticate(clientID, clientSecret string) error {
+	client, err := provider.ClientService.VerifyClientCredentials(clientID, clientSecret)
+	if err != nil {
+		return InternalServerError(err)
+	}
+	if client == nil {
+		return fmt.Errorf("No client with supplied credentials")
+	}
 	return nil
 }
 
