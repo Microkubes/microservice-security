@@ -14,8 +14,8 @@ before_install:
 
 install:
   - go get -u gopkg.in/h2non/gock.v1
-  - go get -u github.com/goadesign/goa/...
   - go get -u github.com/crewjam/saml
+  - go get -u github.com/goadesign/goa/...
 
 before_script:
   - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter

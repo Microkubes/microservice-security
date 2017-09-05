@@ -136,8 +136,8 @@ func TestRedirectUser(t *testing.T) {
 
 	RedirectUser(samlSP, rw, req)
 		
-	if rw.Header().Get("Location") == "" {
-		t.Fatal("Expected Location to be set in the header")
+	if rw.Header().Get("Location") == "" && rw.Header().Get("Content-type") == "" {
+		t.Fatal("Expected Location or Content-type to be set in the header")
 	}
 
 	cookie_name := rw.Result().Cookies()[0].Name
