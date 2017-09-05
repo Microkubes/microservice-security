@@ -23,15 +23,18 @@ type Client struct {
 	Name        string
 	Description string
 	Website     string
+	Secret      string
 }
 
 type ClientAuth struct {
-	ClientId    string
+	ClientID    string
+	UserID      string
 	Scope       string
 	Code        string
 	GeneratedAt int64
 	UserData    string
 	RedirectURI string
+	Confirmed   bool
 }
 
 type ClientService interface {
@@ -39,14 +42,23 @@ type ClientService interface {
 	VerifyClientCredentials(clientID, clientSecret string) (*Client, error)
 	SaveClientAuth(clientAuth *ClientAuth) error
 	GetClientAuth(clientID, code string) (*ClientAuth, error)
-	UpdateUserData(clientID, code, userData string) error
+	GetClientAuthForUser(userID, clientID string) (*ClientAuth, error)
+	ConfirmClientAuth(userID, clientID string) (*ClientAuth, error)
+	UpdateUserData(clientID, code, userID, userData string) error
 	DeleteClientAuth(clientID, code string) error
 }
 
 type User struct {
+	ID            string
+	Username      string
+	Email         string
+	Roles         []string
+	Organizations []string
+	ExternalID    string
 }
 
 type UserService interface {
+	VerifyUser(username, password string) (*User, error)
 }
 
 type OAuth2Token struct {
@@ -56,11 +68,13 @@ type OAuth2Token struct {
 	ValidFor     int
 	Scope        string
 	ClientID     string
+	UserID       string
 }
 
 type TokenService interface {
 	SaveToken(token OAuth2Token) error
 	GetToken(refreshToken string) (*OAuth2Token, error)
+	GetTokenForClient(userID, clientID string) (*OAuth2Token, error)
 }
 
 type OAuth2Provider struct {
@@ -87,7 +101,7 @@ func (provider *OAuth2Provider) Authorize(clientID, scope, redirectURI string) (
 		return "", InternalServerError("failed to generate authorization code")
 	}
 	err = provider.SaveClientAuth(&ClientAuth{
-		ClientId:    clientID,
+		ClientID:    clientID,
 		Code:        code,
 		GeneratedAt: time.Now().Unix(),
 		Scope:       scope,
@@ -201,6 +215,7 @@ func (provider *OAuth2Provider) Refresh(refreshToken, scope string) (newRefreshT
 }
 
 func (provider *OAuth2Provider) Authenticate(clientID, clientSecret string) error {
+	fmt.Println("Authenticate client: ", clientID, clientSecret)
 	client, err := provider.ClientService.VerifyClientCredentials(clientID, clientSecret)
 	if err != nil {
 		return InternalServerError(err)
