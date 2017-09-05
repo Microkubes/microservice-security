@@ -122,5 +122,5 @@ wMDAwMDAwMCIsInVzZXJuYW1lIjoidGVzdC11c2VyIn19.vLl5hWsbYDSybhokeA4sFKJnZznesiUje5
 
 Then you will need to set up the cookie named "saml_token":
 ```bash
- curl -v -b "saml_token=eyJhbGciO...<full token here>...zsCYZzl4" http://localhost:8082/profiles/m
+ curl -v -b "saml_token=eyJhbGciO...<full token here>...zsCYZzl4" http://localhost:8082/profiles/me
 ``` 
