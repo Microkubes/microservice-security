@@ -10,6 +10,7 @@ import (
 	"github.com/JormungandrK/microservice-security/jwt"
 	"github.com/JormungandrK/microservice-security/tools"
 	"github.com/goadesign/goa"
+	uuid "github.com/satori/go.uuid"
 )
 
 var OAuth2ErrorInvalidRedirectURI = goa.NewErrorClass("invalid_request", 400)
@@ -86,6 +87,7 @@ type OAuth2Provider struct {
 	AuthCodeLength            int
 	RefreshTokenLength        int
 	AccessTokenValidityPeriod int
+	ProviderName              string
 }
 
 func (provider *OAuth2Provider) Authorize(clientID, scope, redirectURI string) (code string, err error) {
@@ -152,18 +154,27 @@ func (provider *OAuth2Provider) Exchange(clientID, code, redirectURI string) (re
 	return oauth2Token.RefreshToken, oauth2Token.AccessToken, oauth2Token.ValidFor, nil
 }
 
-func (provider *OAuth2Provider) generateAccessToken(userData map[string]interface{}) (string, error) {
+func (provider *OAuth2Provider) generateAccessToken(userData map[string]interface{}, clientID, scope string) (string, error) {
 	key, err := provider.KeyStore.GetPrivateKey()
 	if err != nil {
 		return "", err
 	}
-	// TODO: Remap JWT standard claims
+	// Remap JWT standard claims
+	userData["jti"] = uuid.NewV4().String()
+	userData["iss"] = provider.ProviderName
+	userData["exp"] = time.Now().Add(time.Duration(provider.AccessTokenValidityPeriod) * time.Millisecond).Unix()
+	userData["iat"] = time.Now().Unix()
+
+	userData["nbf"] = 0
+	userData["sub"] = clientID
+	userData["scopes"] = scope
+
 	token, err := jwt.SignToken(userData, provider.SigningMethod, key)
 	return token, err
 }
 
 func (provider *OAuth2Provider) generateOAuthToken(clientID, scope string, userData map[string]interface{}) (*OAuth2Token, error) {
-	accessToken, err := provider.generateAccessToken(userData)
+	accessToken, err := provider.generateAccessToken(userData, clientID, scope)
 	if err != nil {
 		return nil, err
 	}
