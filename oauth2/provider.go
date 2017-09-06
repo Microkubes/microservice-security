@@ -13,12 +13,23 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// OAuth2ErrorInvalidRedirectURI is Bad Request error for invalid redirect URI
 var OAuth2ErrorInvalidRedirectURI = goa.NewErrorClass("invalid_request", 400)
+
+// OAuth2ErrorInvalidScope is Bad Request error for invalid scope requested
 var OAuth2ErrorInvalidScope = goa.NewErrorClass("invalid_scope", 400)
+
+// InternalServerError is a generic server error
 var InternalServerError = goa.NewErrorClass("server_error", 500)
+
+// OAuth2ErrorUnauthorizedClient is an error for bad client credentials
 var OAuth2ErrorUnauthorizedClient = goa.NewErrorClass("unauthorized_client", 401)
+
+// OAuth2AccessDenied is an access denied error for created auth
 var OAuth2AccessDenied = goa.NewErrorClass("access_denied", 403)
 
+// Client holds the data for a specific client (app).
+// A client must firt be registered for access on the platform.
 type Client struct {
 	ClientID    string
 	Name        string
@@ -27,6 +38,9 @@ type Client struct {
 	Secret      string
 }
 
+// ClientAuth is an authorization record for a specific client (app) and user.
+// It holds the data for a specific client that is (or needs to be) authorized
+// by a user to access some part of the platform.
 type ClientAuth struct {
 	ClientID    string
 	UserID      string
@@ -38,17 +52,41 @@ type ClientAuth struct {
 	Confirmed   bool
 }
 
+// ClientService is an interface that defines the access to a Client and ClientAuth.
 type ClientService interface {
+
+	// GetClient retrieves a Client by its ID.
 	GetClient(clientID string) (*Client, error)
+
+	// VerifyClientCredentials verfies that there is a registered Client with the specified client ID and client secret.
+	// It returns the actual Client data if the credentials are valid, or nil if there is no such client.
 	VerifyClientCredentials(clientID, clientSecret string) (*Client, error)
+
+	// SaveClientAuth stores a ClientAuth.
 	SaveClientAuth(clientAuth *ClientAuth) error
+
+	// GetClientAuth retrieves a ClientAuth for the specified client ID and a generated random code for verification.
 	GetClientAuth(clientID, code string) (*ClientAuth, error)
+
+	// GetClientAuthForUser retrieves a ClientAuth for a Client and User.
+	// Used when is situations where the access code is still not generated.
 	GetClientAuthForUser(userID, clientID string) (*ClientAuth, error)
+
+	// ConfirmClientAuth updates the Confirmed field (sets it to true).
+	// Used to update the client auth once the user has accepted the client to access the data.
 	ConfirmClientAuth(userID, clientID string) (*ClientAuth, error)
+
+	// UpdateUserData updates the ClientAuth with the full user data.
+	// This is techincally a workaround since the goa-oauth2 Provider does not take
+	// into account the user in the access_grant flow.
 	UpdateUserData(clientID, code, userID, userData string) error
+
+	// DeleteClientAuth deletes the ClientAuth.
+	// If you never call this, the ClientAuth should expire automatically after a certain period.
 	DeleteClientAuth(clientID, code string) error
 }
 
+// User holds the user data.
 type User struct {
 	ID            string
 	Username      string
@@ -58,26 +96,54 @@ type User struct {
 	ExternalID    string
 }
 
+// UserService defines an interface for verification of the user credentials.
+// This is used in the access_grant flow, to login the user and then prompt it
+// for confirmation about authorizing the client to access the services on the platform.
 type UserService interface {
+	// VerifyUser verifies the credentials (username and password) and retrieves a
+	// User if the credentials are valid.
 	VerifyUser(username, password string) (*User, error)
 }
 
+// OAuth2Token holds the data for oauth2 token.
 type OAuth2Token struct {
-	AccessToken  string
+	// AccessToken is the actual value of the access token.
+	AccessToken string
+
+	// RefreshToken  holds the refresh token value.
 	RefreshToken string
-	IssuedAt     int64
-	ValidFor     int
-	Scope        string
-	ClientID     string
-	UserID       string
+
+	// Unix timestamp of the time when the access token was issued.
+	IssuedAt int64
+
+	// ValidFor is the time duration for which this token is valid. Expressed in milliseconds.
+	ValidFor int
+
+	// Scope is the scope for which this access token is valid.
+	Scope string
+
+	// ClientID is the reference to the client for which this token has been issued.
+	ClientID string
+
+	// UserID is the reference to the user for which this token has been issued.
+	UserID string
 }
 
+// TokenService defines the interface for managing OAuth2 Tokens.
 type TokenService interface {
+
+	// SaveToken saves the token data to the backend.
 	SaveToken(token OAuth2Token) error
+
+	// GetToken retrieves the OAuth2Token for a refreshToken.
 	GetToken(refreshToken string) (*OAuth2Token, error)
+
+	// GetTokenForClient looks up an OAuth2Token for a specific client and user.
+	// There should be only one such token.
 	GetTokenForClient(userID, clientID string) (*OAuth2Token, error)
 }
 
+// OAuth2Provider holds the data for implementing the oauth2.Provider interface.
 type OAuth2Provider struct {
 	ClientService
 	UserService
@@ -90,6 +156,7 @@ type OAuth2Provider struct {
 	ProviderName              string
 }
 
+// Authorize performs the authorization of a client and generates basic ClientAuth.
 func (provider *OAuth2Provider) Authorize(clientID, scope, redirectURI string) (code string, err error) {
 	client, err := provider.ClientService.GetClient(clientID)
 	if err != nil {
@@ -118,6 +185,7 @@ func (provider *OAuth2Provider) Authorize(clientID, scope, redirectURI string) (
 	return code, nil
 }
 
+// Exchange exchanges the confimed ClientAuth for an access token and refresh token.
 func (provider *OAuth2Provider) Exchange(clientID, code, redirectURI string) (refreshToken, accessToken string, expiresIn int, err error) {
 	// 1. Find ClientAuth
 	// 2. Extract UserData (JSON encoded string of the user data)
@@ -154,6 +222,8 @@ func (provider *OAuth2Provider) Exchange(clientID, code, redirectURI string) (re
 	return oauth2Token.RefreshToken, oauth2Token.AccessToken, oauth2Token.ValidFor, nil
 }
 
+// generateAccessToken generates new access token as JWT token with encoded user data and standard JWT claims.
+// The generated access token is self contained - holds all data needed to authenticate and authorize the user by APIs.
 func (provider *OAuth2Provider) generateAccessToken(userData map[string]interface{}, clientID, scope string) (string, error) {
 	key, err := provider.KeyStore.GetPrivateKey()
 	if err != nil {
@@ -197,6 +267,7 @@ func (provider *OAuth2Provider) generateOAuthToken(clientID, scope string, userD
 	return &oauth2Token, err
 }
 
+// Refresh exchnages a refresh token for a new access token.
 func (provider *OAuth2Provider) Refresh(refreshToken, scope string) (newRefreshToken, accessToken string, expiresIn int, err error) {
 	oauth2Token, err := provider.TokenService.GetToken(refreshToken)
 	if err != nil {
@@ -225,6 +296,7 @@ func (provider *OAuth2Provider) Refresh(refreshToken, scope string) (newRefreshT
 	return oauth2Token.RefreshToken, oauth2Token.AccessToken, oauth2Token.ValidFor, nil
 }
 
+// Authenticate checks the client credentials.
 func (provider *OAuth2Provider) Authenticate(clientID, clientSecret string) error {
 	fmt.Println("Authenticate client: ", clientID, clientSecret)
 	client, err := provider.ClientService.VerifyClientCredentials(clientID, clientSecret)
@@ -237,6 +309,7 @@ func (provider *OAuth2Provider) Authenticate(clientID, clientSecret string) erro
 	return nil
 }
 
+// GenerateRandomCode generates a cryptographically strong random string with the specified length.
 func GenerateRandomCode(n int) (string, error) {
 	buff := make([]byte, n*3/4+1) // base64 string will have approximately 4/3 more chars than the buffer byte length.
 	_, err := rand.Read(buff)
