@@ -105,7 +105,7 @@ func TestNewSAMLSecurityMiddleware(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "http://example.com", nil)
 	expire := time.Now().AddDate(0, 0, 1)
-    cookie := http.Cookie{"saml_token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}} 
+    cookie := http.Cookie{"token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}} 
     req.AddCookie(&cookie)
 
    	ctx := context.Background()
@@ -155,7 +155,7 @@ func TestGetPossibleRequestIDs(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "http://example.com", nil)
 	expire := time.Now().AddDate(0, 0, 1)
-    cookie := http.Cookie{"saml_token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}} 
+    cookie := http.Cookie{"saml_response_token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}} 
     req.AddCookie(&cookie)
 
     ids := getPossibleRequestIDs(samlSP, req)

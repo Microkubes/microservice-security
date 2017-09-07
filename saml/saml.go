@@ -21,7 +21,7 @@ const (
 	// SAMLSecurityType is the name of the security type (JWT, OAUTH2, SAML...)
 	SAMLSecurityType = "SAML"
 	// Cookie name for saml token
-	CookieName = "saml_token"
+	CookieName = "token"
 )
 
 var jwtSigningMethod = jwt.SigningMethodHS256
@@ -58,7 +58,6 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 				}
 
 				spMiddleware.Authorize(rw, req, assertion)
-				return goa.ErrNotFound("SAML Assertion Consumer Service route not defined")
 			}
 
 			// Serve /saml/metadata
