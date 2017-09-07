@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/JormungandrK/microservice-security/jwt"
@@ -105,8 +106,8 @@ type UserService interface {
 	VerifyUser(username, password string) (*User, error)
 }
 
-// OAuth2Token holds the data for oauth2 token.
-type OAuth2Token struct {
+// AuthToken holds the data for oauth2 token.
+type AuthToken struct {
 	// AccessToken is the actual value of the access token.
 	AccessToken string
 
@@ -133,18 +134,18 @@ type OAuth2Token struct {
 type TokenService interface {
 
 	// SaveToken saves the token data to the backend.
-	SaveToken(token OAuth2Token) error
+	SaveToken(token AuthToken) error
 
 	// GetToken retrieves the OAuth2Token for a refreshToken.
-	GetToken(refreshToken string) (*OAuth2Token, error)
+	GetToken(refreshToken string) (*AuthToken, error)
 
 	// GetTokenForClient looks up an OAuth2Token for a specific client and user.
 	// There should be only one such token.
-	GetTokenForClient(userID, clientID string) (*OAuth2Token, error)
+	GetTokenForClient(userID, clientID string) (*AuthToken, error)
 }
 
-// OAuth2Provider holds the data for implementing the oauth2.Provider interface.
-type OAuth2Provider struct {
+// AuthProvider holds the data for implementing the oauth2.Provider interface.
+type AuthProvider struct {
 	ClientService
 	UserService
 	TokenService
@@ -157,7 +158,7 @@ type OAuth2Provider struct {
 }
 
 // Authorize performs the authorization of a client and generates basic ClientAuth.
-func (provider *OAuth2Provider) Authorize(clientID, scope, redirectURI string) (code string, err error) {
+func (provider *AuthProvider) Authorize(clientID, scope, redirectURI string) (code string, err error) {
 	client, err := provider.ClientService.GetClient(clientID)
 	if err != nil {
 		return "", OAuth2ErrorUnauthorizedClient("Invalid Client ID")
@@ -186,7 +187,7 @@ func (provider *OAuth2Provider) Authorize(clientID, scope, redirectURI string) (
 }
 
 // Exchange exchanges the confimed ClientAuth for an access token and refresh token.
-func (provider *OAuth2Provider) Exchange(clientID, code, redirectURI string) (refreshToken, accessToken string, expiresIn int, err error) {
+func (provider *AuthProvider) Exchange(clientID, code, redirectURI string) (refreshToken, accessToken string, expiresIn int, err error) {
 	// 1. Find ClientAuth
 	// 2. Extract UserData (JSON encoded string of the user data)
 	// 3. Sign JWT token with the user data
@@ -224,7 +225,7 @@ func (provider *OAuth2Provider) Exchange(clientID, code, redirectURI string) (re
 
 // generateAccessToken generates new access token as JWT token with encoded user data and standard JWT claims.
 // The generated access token is self contained - holds all data needed to authenticate and authorize the user by APIs.
-func (provider *OAuth2Provider) generateAccessToken(userData map[string]interface{}, clientID, scope string) (string, error) {
+func (provider *AuthProvider) generateAccessToken(userData map[string]interface{}, clientID, scope string) (string, error) {
 	key, err := provider.KeyStore.GetPrivateKey()
 	if err != nil {
 		return "", err
@@ -243,7 +244,7 @@ func (provider *OAuth2Provider) generateAccessToken(userData map[string]interfac
 	return token, err
 }
 
-func (provider *OAuth2Provider) generateOAuthToken(clientID, scope string, userData map[string]interface{}) (*OAuth2Token, error) {
+func (provider *AuthProvider) generateOAuthToken(clientID, scope string, userData map[string]interface{}) (*AuthToken, error) {
 	accessToken, err := provider.generateAccessToken(userData, clientID, scope)
 	if err != nil {
 		return nil, err
@@ -254,7 +255,7 @@ func (provider *OAuth2Provider) generateOAuthToken(clientID, scope string, userD
 		return nil, err
 	}
 
-	oauth2Token := OAuth2Token{
+	oauth2Token := AuthToken{
 		AccessToken:  accessToken,
 		ClientID:     clientID,
 		IssuedAt:     time.Now().Unix(),
@@ -268,7 +269,7 @@ func (provider *OAuth2Provider) generateOAuthToken(clientID, scope string, userD
 }
 
 // Refresh exchnages a refresh token for a new access token.
-func (provider *OAuth2Provider) Refresh(refreshToken, scope string) (newRefreshToken, accessToken string, expiresIn int, err error) {
+func (provider *AuthProvider) Refresh(refreshToken, scope string) (newRefreshToken, accessToken string, expiresIn int, err error) {
 	oauth2Token, err := provider.TokenService.GetToken(refreshToken)
 	if err != nil {
 		return "", "", 0, InternalServerError("Failed to verify refresh token", err)
@@ -282,7 +283,18 @@ func (provider *OAuth2Provider) Refresh(refreshToken, scope string) (newRefreshT
 	}
 
 	userData := map[string]interface{}{}
-	err = json.Unmarshal([]byte(oauth2Token.AccessToken), &userData)
+
+	tokenParts := strings.Split(oauth2Token.AccessToken, ".")
+	if len(tokenParts) != 3 {
+		return "", "", 0, InternalServerError("The access token is in invalid format")
+	}
+
+	jwtClaims, err := base64.StdEncoding.DecodeString(tokenParts[1])
+	if err != nil {
+		return "", "", 0, InternalServerError("Failed to decode the access token", err)
+	}
+
+	err = json.Unmarshal(jwtClaims, &userData)
 	if err != nil {
 		return "", "", 0, InternalServerError("Failed to read the access token", err)
 	}
@@ -297,7 +309,7 @@ func (provider *OAuth2Provider) Refresh(refreshToken, scope string) (newRefreshT
 }
 
 // Authenticate checks the client credentials.
-func (provider *OAuth2Provider) Authenticate(clientID, clientSecret string) error {
+func (provider *AuthProvider) Authenticate(clientID, clientSecret string) error {
 	fmt.Println("Authenticate client: ", clientID, clientSecret)
 	client, err := provider.ClientService.VerifyClientCredentials(clientID, clientSecret)
 	if err != nil {
