@@ -92,7 +92,7 @@ func main() {
 
     // other initializations here...
 
-    service.Use(chain.ToGoaMiddleware(sc)) // attach the security chain as Goa middleware
+    service.Use(chain.AsGoaMiddleware(sc)) // attach the security chain as Goa middleware
 }
 
 ```
