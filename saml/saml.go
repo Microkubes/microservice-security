@@ -7,6 +7,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/JormungandrK/microservice-security/auth"
@@ -29,7 +30,7 @@ var jwtSigningMethod = jwt.SigningMethodHS256
 // SAML claims
 type TokenClaims struct {
 	jwt.StandardClaims
-	Attributes map[string]interface{} `json:"attr"`
+	Attributes map[string][]string `json:"attr"`
 }
 
 // NewSAMLSecurity creates a SAML SecurityChainMiddleware using RSA private key.
@@ -47,7 +48,6 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 			if req.URL.Path == spMiddleware.ServiceProvider.AcsURL.Path {
 				req.ParseForm()
 				assertion, err := spMiddleware.ServiceProvider.ParseResponse(req, getPossibleRequestIDs(spMiddleware, req))
-				fmt.Println(err)
 				if err != nil {
 					if parseErr, ok := err.(*saml.InvalidResponseError); ok {
 						spMiddleware.ServiceProvider.Logger.Printf("RESPONSE: ===\n%s\n===\nNOW: %s\nERROR: %s",
@@ -58,6 +58,7 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 				}
 
 				spMiddleware.Authorize(rw, req, assertion)
+				return goa.ErrNotFound("SAML ACS route not defined")
 			}
 
 			// Serve /saml/metadata
@@ -67,18 +68,13 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 				rw.Write(buf)
 				return goa.ErrNotFound("SAML Metadata route not defined")
 			}
-			
-			cookie, err := req.Cookie(CookieName)
-			if err != nil {
-				return goa.ErrUnauthorized(fmt.Sprintf("missing cookie %s", CookieName))
-			}
 
 			// Code used to generate token for testing
 			// sB := x509.MarshalPKCS1PrivateKey(spMiddleware.ServiceProvider.Key)
 			// claims := TokenClaims{}
 			// claims.Audience = "http://localhost:8082/saml/metadata"
 			// claims.Attributes = map[string]interface{}{
-			// 	"userId": "59a006ae0000000000000000",
+			// 	"userId": "59b2e5120000000000000000",
 			// 	"username": "test-user",
 			// 	"roles": "user, admin",
 			// 	"organizations": "Ozrg1, Org2",
@@ -89,6 +85,12 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 			// fmt.Println(tokenStr)
 			// fmt.Println("===========")
 
+			cookie, err := req.Cookie(CookieName)
+			if err != nil {
+				RedirectUser(spMiddleware, rw, req)
+				return goa.ErrUnauthorized(fmt.Sprintf("missing cookie %s", CookieName))
+			}
+
 			tokenClaims := TokenClaims{}
 			token, err := jwt.ParseWithClaims(cookie.Value, &tokenClaims, func(t *jwt.Token) (interface{}, error) {
 				secretBlock := x509.MarshalPKCS1PrivateKey(spMiddleware.ServiceProvider.Key)
@@ -96,16 +98,18 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 			})
 
 			if err != nil || !token.Valid {
-				fmt.Println(err)
+				RedirectUser(spMiddleware, rw, req)
 				return goa.ErrUnauthorized(fmt.Sprintf("invalid SAML token: %s", err))
 			}
 
 			if err := tokenClaims.StandardClaims.Valid(); err != nil {
+				RedirectUser(spMiddleware, rw, req)
 				return goa.ErrUnauthorized("invalid SAML token standard claims: %s", err)
 			}
 
 			// Audience basically identifies the audience [Service providers]. Audience is the EntityID of SP.
 			if tokenClaims.Audience != spMiddleware.ServiceProvider.Metadata().EntityID {
+				RedirectUser(spMiddleware, rw, req)
 				return goa.ErrUnauthorized("invalid audience from SAML token")
 			}
 
@@ -114,34 +118,24 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 			if _, ok := attributes["username"]; !ok {
 				return jwt.NewValidationError("Username is missing form SAML token", jwt.ValidationErrorClaimsInvalid)
 			}
+			username := attributes["username"][0]
+
 			if _, ok := attributes["userId"]; !ok {
 				return jwt.NewValidationError("User ID is missing form SAML token", jwt.ValidationErrorClaimsInvalid)
 			}
+			userID := attributes["userId"][0]
 
-			var username string
-			var userID string
-			roles := []string{}
-			organizations := []string{}
-
-			if _, ok := attributes["username"].(string); !ok {
+			if reflect.TypeOf(username).String() != "string" {
 				return jwt.NewValidationError("invalid username from SAML token", jwt.ValidationErrorClaimsInvalid)
 			}
-			username = attributes["username"].(string)
-			if _, ok := attributes["userId"].(string); !ok {
-				return jwt.NewValidationError("invalid user ID from SAML token", jwt.ValidationErrorClaimsInvalid)
-			}
-			userID = attributes["userId"].(string)
 
-			if rolesStr, ok := attributes["roles"]; ok {
-				roles = strings.Split(rolesStr.(string), ",")
-			}
-			if organizationsStr, ok := attributes["organizations"]; ok {
-				organizations = strings.Split(organizationsStr.(string), ",")
+			if reflect.TypeOf(userID).String() != "string" {
+				return jwt.NewValidationError("invalid user ID from SAML token", jwt.ValidationErrorClaimsInvalid)
 			}
 
 			authObj := &auth.Auth{
-				Roles:         roles,
-				Organizations: organizations,
+				Roles:         attributes["roles"],
+				Organizations: attributes["organizations"],
 				Username:      username,
 				UserID:        userID,
 			}
@@ -192,10 +186,10 @@ func randomBytes(n int) []byte {
 
 // Redirect user
 func RedirectUser(spMiddleware *samlsp.Middleware, rw http.ResponseWriter, req *http.Request) {
-	if req.URL.Path == spMiddleware.ServiceProvider.AcsURL.Path {
-		panic("don't wrap Middleware with RequireAccount")
-	}
-	
+	// if req.URL.Path == spMiddleware.ServiceProvider.AcsURL.Path {
+	// 	panic("don't wrap Middleware with RequireAccount")
+	// }
+
 	binding := saml.HTTPRedirectBinding
 	bindingLocation := spMiddleware.ServiceProvider.GetSSOBindingLocation(binding)
 	if bindingLocation == "" {
@@ -235,7 +229,7 @@ func RedirectUser(spMiddleware *samlsp.Middleware, rw http.ResponseWriter, req *
 		rw.WriteHeader(http.StatusFound)
 		return
 	}
-	
+
 	if binding == saml.HTTPPostBinding {
 		rw.Header().Set("Content-Security-Policy", ""+
 			"default-src; "+

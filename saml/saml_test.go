@@ -94,11 +94,11 @@ func TestNewSAMLSecurityMiddleware(t *testing.T) {
 	secret := x509.MarshalPKCS1PrivateKey(samlSP.ServiceProvider.Key)
 	claims := TokenClaims{}
 	claims.Audience = "http://localhost:8082/saml/metadata"
-	claims.Attributes = map[string]interface{}{
-		"userId": "59a006ae0000000000000000",
-		"username": "test-user",
-		"roles": "user, admin",
-		"organizations": "Ozrg1, Org2",
+	claims.Attributes = map[string][]string{
+		"userId": []string{"59a006ae0000000000000000"},
+		"username": []string{"test-user"},
+		"roles": []string{"user, admin"},
+		"organizations": []string{"Ozrg1, Org2"},
 	}
 	tokenHS := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenStr, _ := tokenHS.SignedString(secret)
