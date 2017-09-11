@@ -19,7 +19,7 @@ import (
 	"crypto/rsa"
 )
 
-// OAUTH2SecurityType is the name of the security type (JWT, OAUTH2, SAML...)
+// OAuth2SecurityType is the name of the security type (JWT, OAUTH2, SAML...)
 const OAuth2SecurityType = "OAuth2"
 
 // NewOAuth2Security creates a OAuth2 SecurityChainMiddleware using a simple key resolver
@@ -34,7 +34,7 @@ func NewOAuth2Security(keysDir string, scheme *goa.OAuth2Security) chain.Securit
 	return chain.ToSecurityChainMiddleware(OAuth2SecurityType, goaMiddleware)
 }
 
-// NewOAuth2Middleware creates a middleware that checks for the presence of an authorization header
+// NewOAuth2SecurityMiddleware creates a middleware that checks for the presence of an authorization header
 // and validates its content.
 // The steps taken by the middleware are:
 // 1. Validate the "Bearer" token present in the "Authorization" header against the key(s)
