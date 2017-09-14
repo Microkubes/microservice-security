@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -163,7 +164,7 @@ func (provider *AuthProvider) Authorize(clientID, scope, redirectURI string) (co
 	if err != nil {
 		return "", OAuth2ErrorUnauthorizedClient("invalid_client")
 	}
-	if client.Website != redirectURI {
+	if err = CompareRedirectURI(client.Website, redirectURI); err != nil {
 		return "", OAuth2ErrorInvalidRedirectURI("invalid_request")
 	}
 	code, err = GenerateRandomCode(provider.AuthCodeLength)
@@ -194,6 +195,18 @@ func (provider *AuthProvider) Exchange(clientID, code, redirectURI string) (refr
 	}
 	if clientAuth == nil || clientAuth.UserData == "" {
 		return "", "", 0, OAuth2AccessDenied("client not authorized")
+	}
+
+	client, err := provider.ClientService.GetClient(clientID)
+	if err != nil {
+		return "", "", 0, InternalServerError("Unable to verify client at this time")
+	}
+	if client == nil {
+		return "", "", 0, OAuth2AccessDenied("client not registered")
+	}
+
+	if err = CompareRedirectURI(client.Website, redirectURI); err != nil {
+		return "", "", 0, OAuth2ErrorInvalidRedirectURI(err)
 	}
 
 	userData := map[string]interface{}{}
@@ -322,4 +335,38 @@ func GenerateRandomCode(n int) (string, error) {
 	code := base64.StdEncoding.EncodeToString(buff)
 
 	return code[0:n], nil
+}
+
+// CompareRedirectURI compares the registered redirect URI with a provided one.
+func CompareRedirectURI(registered, provided string) error {
+	// compare scheme + host + port
+	var registeredURL *url.URL
+	var providedURL *url.URL
+	var regErr error
+	var provErr error
+
+	registeredURL, regErr = url.Parse(registered)
+	providedURL, provErr = url.Parse(provided)
+
+	if regErr != nil && provErr != nil {
+		// both are not valid URLs, so just compare the value
+		if registered == provided {
+			return nil
+		}
+		return fmt.Errorf("redirect URI value differs from the registered")
+	} else if regErr == nil && provErr == nil {
+		// both are valid URLs
+
+		// compare scheme + host:port
+		if registeredURL.Scheme == providedURL.Scheme &&
+			registeredURL.Host == providedURL.Host {
+			return nil
+		}
+		return fmt.Errorf("redirect URL different than the registered")
+	}
+	// whatever we got as redirect uri, it cannot be the same with the
+	// registered one at this point. One is valid URL, the other isn't.
+
+	return fmt.Errorf("redirect URI is not valid")
+
 }
