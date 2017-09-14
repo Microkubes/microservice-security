@@ -43,14 +43,14 @@ type Client struct {
 // It holds the data for a specific client that is (or needs to be) authorized
 // by a user to access some part of the platform.
 type ClientAuth struct {
-	ClientID    string `json:"clientId, omitempty"`
-	UserID      string `json:"userId, omitempty"`
-	Scope       string `json:"scope, omitempty"`
-	Code        string `json:"code, omitempty"`
-	GeneratedAt int64  `json:"generatedAt, omitempty"`
-	UserData    string `json:"userData, omitempty"`
-	RedirectURI string `json:"redirectUri, omitempty"`
-	Confirmed   bool   `json:"confirmed, omitempty"`
+	ClientID    string `json:"clientId, omitempty" bson:"clientId"`
+	UserID      string `json:"userId, omitempty" bson:"userId"`
+	Scope       string `json:"scope, omitempty" bson:"scope"`
+	Code        string `json:"code, omitempty" bson:"code"`
+	GeneratedAt int64  `json:"generatedAt, omitempty" bson:"generatedAt"`
+	UserData    string `json:"userData, omitempty" bson:"userData"`
+	RedirectURI string `json:"redirectUri, omitempty" bson:"redirectUri"`
+	Confirmed   bool   `json:"confirmed, omitempty" bson:"confirmed"`
 }
 
 // ClientService is an interface that defines the access to a Client and ClientAuth.
@@ -109,25 +109,25 @@ type UserService interface {
 // AuthToken holds the data for oauth2 token.
 type AuthToken struct {
 	// AccessToken is the actual value of the access token.
-	AccessToken string
+	AccessToken string `json:"accessToken, omitempty" bson:"accessToken"`
 
 	// RefreshToken  holds the refresh token value.
-	RefreshToken string
+	RefreshToken string `json:"refreshToken, omitempty" bson:"refreshToken"`
 
 	// Unix timestamp of the time when the access token was issued.
-	IssuedAt int64
+	IssuedAt int64 `json:"issuedAt, omitempty" bson:"issuedAt"`
 
 	// ValidFor is the time duration for which this token is valid. Expressed in milliseconds.
-	ValidFor int
+	ValidFor int `json:"validFor, omitempty" bson:"validFor"`
 
 	// Scope is the scope for which this access token is valid.
-	Scope string
+	Scope string `json:"scope, omitempty" bson:"scope"`
 
 	// ClientID is the reference to the client for which this token has been issued.
-	ClientID string
+	ClientID string `json:"clientId, omitempty" bson:"clientId"`
 
 	// UserID is the reference to the user for which this token has been issued.
-	UserID string
+	UserID string `json:"userId, omitempty" bson:"userId"`
 }
 
 // TokenService defines the interface for managing OAuth2 Tokens.
@@ -170,7 +170,7 @@ func (provider *AuthProvider) Authorize(clientID, scope, redirectURI string) (co
 	if err != nil {
 		return "", InternalServerError("server_error")
 	}
-	err = provider.SaveClientAuth(&ClientAuth{
+	err = provider.ClientService.SaveClientAuth(&ClientAuth{
 		ClientID:    clientID,
 		Code:        code,
 		GeneratedAt: time.Now().Unix(),
@@ -208,7 +208,6 @@ func (provider *AuthProvider) Exchange(clientID, code, redirectURI string) (refr
 	}
 
 	err = provider.ClientService.DeleteClientAuth(clientID, code)
-
 	if err != nil {
 		return "", "", 0, InternalServerError(err)
 	}
