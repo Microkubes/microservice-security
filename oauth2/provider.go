@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -32,25 +33,25 @@ var OAuth2AccessDenied = goa.NewErrorClass("access_denied", 403)
 // Client holds the data for a specific client (app).
 // A client must firt be registered for access on the platform.
 type Client struct {
-	ClientID    string
-	Name        string
-	Description string
-	Website     string
-	Secret      string
+	ClientID    string `json:"clientId, omitempty"`
+	Name        string `json:"name, omitempty"`
+	Description string `json:"description, omitempty"`
+	Website     string `json:"website, omitempty"`
+	Secret      string `json:"secret, omitempty"`
 }
 
 // ClientAuth is an authorization record for a specific client (app) and user.
 // It holds the data for a specific client that is (or needs to be) authorized
 // by a user to access some part of the platform.
 type ClientAuth struct {
-	ClientID    string
-	UserID      string
-	Scope       string
-	Code        string
-	GeneratedAt int64
-	UserData    string
-	RedirectURI string
-	Confirmed   bool
+	ClientID    string `json:"clientId, omitempty" bson:"clientId"`
+	UserID      string `json:"userId, omitempty" bson:"userId"`
+	Scope       string `json:"scope, omitempty" bson:"scope"`
+	Code        string `json:"code, omitempty" bson:"code"`
+	GeneratedAt int64  `json:"generatedAt, omitempty" bson:"generatedAt"`
+	UserData    string `json:"userData, omitempty" bson:"userData"`
+	RedirectURI string `json:"redirectUri, omitempty" bson:"redirectUri"`
+	Confirmed   bool   `json:"confirmed, omitempty" bson:"confirmed"`
 }
 
 // ClientService is an interface that defines the access to a Client and ClientAuth.
@@ -89,12 +90,12 @@ type ClientService interface {
 
 // User holds the user data.
 type User struct {
-	ID            string
-	Username      string
-	Email         string
-	Roles         []string
-	Organizations []string
-	ExternalID    string
+	ID            string   `json:"id, omitempty"`
+	Username      string   `json:"username, omitempty"`
+	Email         string   `json:"email, omitempty"`
+	Roles         []string `json:"roles, omitempty"`
+	Organizations []string `json:"organizations, omitempty"`
+	ExternalID    string   `json:"externalId, omitempty"`
 }
 
 // UserService defines an interface for verification of the user credentials.
@@ -109,25 +110,25 @@ type UserService interface {
 // AuthToken holds the data for oauth2 token.
 type AuthToken struct {
 	// AccessToken is the actual value of the access token.
-	AccessToken string
+	AccessToken string `json:"accessToken, omitempty" bson:"accessToken"`
 
 	// RefreshToken  holds the refresh token value.
-	RefreshToken string
+	RefreshToken string `json:"refreshToken, omitempty" bson:"refreshToken"`
 
 	// Unix timestamp of the time when the access token was issued.
-	IssuedAt int64
+	IssuedAt int64 `json:"issuedAt, omitempty" bson:"issuedAt"`
 
 	// ValidFor is the time duration for which this token is valid. Expressed in milliseconds.
-	ValidFor int
+	ValidFor int `json:"validFor, omitempty" bson:"validFor"`
 
 	// Scope is the scope for which this access token is valid.
-	Scope string
+	Scope string `json:"scope, omitempty" bson:"scope"`
 
 	// ClientID is the reference to the client for which this token has been issued.
-	ClientID string
+	ClientID string `json:"clientId, omitempty" bson:"clientId"`
 
 	// UserID is the reference to the user for which this token has been issued.
-	UserID string
+	UserID string `json:"userId, omitempty" bson:"userId"`
 }
 
 // TokenService defines the interface for managing OAuth2 Tokens.
@@ -161,16 +162,16 @@ type AuthProvider struct {
 func (provider *AuthProvider) Authorize(clientID, scope, redirectURI string) (code string, err error) {
 	client, err := provider.ClientService.GetClient(clientID)
 	if err != nil {
-		return "", OAuth2ErrorUnauthorizedClient("Invalid Client ID")
+		return "", OAuth2ErrorUnauthorizedClient("invalid_client")
 	}
-	if client.Website != redirectURI {
-		return "", OAuth2ErrorInvalidRedirectURI("invalid redirect URI")
+	if err = CompareRedirectURI(client.Website, redirectURI); err != nil {
+		return "", OAuth2ErrorInvalidRedirectURI("invalid_request")
 	}
 	code, err = GenerateRandomCode(provider.AuthCodeLength)
 	if err != nil {
-		return "", InternalServerError("failed to generate authorization code")
+		return "", InternalServerError("server_error")
 	}
-	err = provider.SaveClientAuth(&ClientAuth{
+	err = provider.ClientService.SaveClientAuth(&ClientAuth{
 		ClientID:    clientID,
 		Code:        code,
 		GeneratedAt: time.Now().Unix(),
@@ -181,26 +182,31 @@ func (provider *AuthProvider) Authorize(clientID, scope, redirectURI string) (co
 		// owner has authorized the client. At that point we have the user logged in and we serialize the user data)
 	})
 	if err != nil {
-		return "", InternalServerError("Failed to authorize client")
+		return "", InternalServerError("unauthorized_client")
 	}
 	return code, nil
 }
 
 // Exchange exchanges the confimed ClientAuth for an access token and refresh token.
 func (provider *AuthProvider) Exchange(clientID, code, redirectURI string) (refreshToken, accessToken string, expiresIn int, err error) {
-	// 1. Find ClientAuth
-	// 2. Extract UserData (JSON encoded string of the user data)
-	// 3. Sign JWT token with the user data
-	// 4. Generate Refresh token (crypto-strong random string)
-	// 5. Generate the Token entry (JWT + Refresh token + clientId + timestamp)
-	// 6. Store the token
-	// 7. Clean up the Client Authroization
 	clientAuth, err := provider.ClientService.GetClientAuth(clientID, code)
 	if err != nil {
 		return "", "", 0, InternalServerError("Failed to verify client authentication", err)
 	}
 	if clientAuth == nil || clientAuth.UserData == "" {
 		return "", "", 0, OAuth2AccessDenied("client not authorized")
+	}
+
+	client, err := provider.ClientService.GetClient(clientID)
+	if err != nil {
+		return "", "", 0, InternalServerError("Unable to verify client at this time")
+	}
+	if client == nil {
+		return "", "", 0, OAuth2AccessDenied("client not registered")
+	}
+
+	if err = CompareRedirectURI(client.Website, redirectURI); err != nil {
+		return "", "", 0, OAuth2ErrorInvalidRedirectURI(err)
 	}
 
 	userData := map[string]interface{}{}
@@ -215,7 +221,6 @@ func (provider *AuthProvider) Exchange(clientID, code, redirectURI string) (refr
 	}
 
 	err = provider.ClientService.DeleteClientAuth(clientID, code)
-
 	if err != nil {
 		return "", "", 0, InternalServerError(err)
 	}
@@ -310,7 +315,6 @@ func (provider *AuthProvider) Refresh(refreshToken, scope string) (newRefreshTok
 
 // Authenticate checks the client credentials.
 func (provider *AuthProvider) Authenticate(clientID, clientSecret string) error {
-	fmt.Println("Authenticate client: ", clientID, clientSecret)
 	client, err := provider.ClientService.VerifyClientCredentials(clientID, clientSecret)
 	if err != nil {
 		return InternalServerError(err)
@@ -331,4 +335,38 @@ func GenerateRandomCode(n int) (string, error) {
 	code := base64.StdEncoding.EncodeToString(buff)
 
 	return code[0:n], nil
+}
+
+// CompareRedirectURI compares the registered redirect URI with a provided one.
+func CompareRedirectURI(registered, provided string) error {
+	// compare scheme + host + port
+	var registeredURL *url.URL
+	var providedURL *url.URL
+	var regErr error
+	var provErr error
+
+	registeredURL, regErr = url.Parse(registered)
+	providedURL, provErr = url.Parse(provided)
+
+	if regErr != nil && provErr != nil {
+		// both are not valid URLs, so just compare the value
+		if registered == provided {
+			return nil
+		}
+		return fmt.Errorf("redirect URI value differs from the registered")
+	} else if regErr == nil && provErr == nil {
+		// both are valid URLs
+
+		// compare scheme + host:port
+		if registeredURL.Scheme == providedURL.Scheme &&
+			registeredURL.Host == providedURL.Host {
+			return nil
+		}
+		return fmt.Errorf("redirect URL different than the registered")
+	}
+	// whatever we got as redirect uri, it cannot be the same with the
+	// registered one at this point. One is valid URL, the other isn't.
+
+	return fmt.Errorf("redirect URI is not valid")
+
 }
