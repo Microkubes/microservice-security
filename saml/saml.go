@@ -4,25 +4,25 @@ import (
 	"context"
 	"crypto/x509"
 	// "crypto/tls"
+	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
-	"encoding/json"
-	"io/ioutil"
-	"errors"
-	"bytes"
 
 	"github.com/JormungandrK/microservice-security/auth"
 	"github.com/JormungandrK/microservice-security/chain"
 	"github.com/JormungandrK/microservice-security/saml/config"
+	"github.com/afex/hystrix-go/hystrix"
 	"github.com/crewjam/saml"
 	"github.com/crewjam/saml/samlsp"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/goadesign/goa"
-	"github.com/afex/hystrix-go/hystrix"
 )
 
 const (
@@ -58,8 +58,8 @@ type UserPayload struct {
 
 // Email payload
 type EmailPayload struct {
-  // Email of the user		
-  Email string
+	// Email of the user
+	Email string
 }
 
 // NewSAMLSecurity creates a SAML SecurityChainMiddleware using RSA private key.
@@ -157,13 +157,13 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 					if err != nil {
 						return err
 					}
-				}	
+				}
 
 				username = user["username"].(string)
 				userID = user["id"].(string)
 
 				for _, v := range user["roles"].([]interface{}) {
-				    attributes["roles"] = append(attributes["roles"], v.(string))
+					attributes["roles"] = append(attributes["roles"], v.(string))
 				}
 			} else {
 				// User came from custom IdP.
@@ -183,7 +183,7 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 
 				if reflect.TypeOf(userID).String() != "string" {
 					return jwt.NewValidationError("invalid user ID from SAML token", jwt.ValidationErrorClaimsInvalid)
-				}				
+				}
 			}
 
 			authObj := &auth.Auth{
@@ -192,7 +192,6 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 				Username:      username,
 				UserID:        userID,
 			}
-			
 
 			return h(auth.SetAuth(ctx, authObj), rw, req)
 		}
@@ -312,22 +311,22 @@ func registerUser(email, firstName, lastName string) (map[string]interface{}, er
 	})
 
 	user := UserPayload{
-		Fullname: fmt.Sprintf("%s %s", firstName, lastName),
-        Username:  email,
-        Email: email,
-        ExternalID: fmt.Sprintf("google: %s", email),
-        Roles:	[]string{"user"},
-        Active: true,
-    }
+		Fullname:   fmt.Sprintf("%s %s", firstName, lastName),
+		Username:   email,
+		Email:      email,
+		ExternalID: fmt.Sprintf("google: %s", email),
+		Roles:      []string{"user"},
+		Active:     true,
+	}
 
 	payload, err := json.Marshal(user)
 	if err != nil {
 		return nil, err
 	}
 
- //    tr := &http.Transport{
- //        TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
- //    }
+	//    tr := &http.Transport{
+	//        TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	//    }
 	// client := &http.Client{Transport: tr}
 	client := &http.Client{}
 	output := make(chan *http.Response, 1)
@@ -369,9 +368,9 @@ func findUser(email string) (map[string]interface{}, error) {
 		panic(err)
 	}
 
-	emailPayload := EmailPayload {
-        Email: email,
-    }
+	emailPayload := EmailPayload{
+		Email: email,
+	}
 
 	payload, err := json.Marshal(emailPayload)
 	if err != nil {
@@ -409,7 +408,7 @@ func findUser(email string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	return resp, nil	
+	return resp, nil
 }
 
 // Make post request

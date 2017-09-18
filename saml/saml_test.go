@@ -1,25 +1,25 @@
 package saml
 
 import (
-	"testing"
-	"crypto/x509"
-	"crypto/rsa"
+	"context"
 	"crypto"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/pem"
-	"net/url"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"time"
-	"context"
-	"strings"
-	"io/ioutil"
+	"net/url"
 	"os"
+	"strings"
+	"testing"
+	"time"
 
 	"gopkg.in/h2non/gock.v1"
 
+	"github.com/JormungandrK/microservice-security/auth"
 	"github.com/crewjam/saml/samlsp"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/JormungandrK/microservice-security/auth"
 )
 
 var key = func() crypto.PrivateKey {
@@ -99,9 +99,9 @@ func TestNewSAMLSecurityMiddleware(t *testing.T) {
 	claims := TokenClaims{}
 	claims.Audience = "http://localhost:8082/saml/metadata"
 	claims.Attributes = map[string][]string{
-		"userId": []string{"59a006ae0000000000000000"},
-		"username": []string{"test-user"},
-		"roles": []string{"user, admin"},
+		"userId":        []string{"59a006ae0000000000000000"},
+		"username":      []string{"test-user"},
+		"roles":         []string{"user, admin"},
 		"organizations": []string{"Ozrg1, Org2"},
 	}
 	tokenHS := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -109,12 +109,12 @@ func TestNewSAMLSecurityMiddleware(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "http://example.com", nil)
 	expire := time.Now().AddDate(0, 0, 1)
-    cookie := http.Cookie{"token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}} 
-    req.AddCookie(&cookie)
+	cookie := http.Cookie{"token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}}
+	req.AddCookie(&cookie)
 
-   	ctx := context.Background()
+	ctx := context.Background()
 	modifiedCtx := ctx
-    middleware := NewSAMLSecurityMiddleware(samlSP)
+	middleware := NewSAMLSecurityMiddleware(samlSP)
 	err = middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
 		// This handler is called AFTER the goa middleware executes.
 		// It modifies the context, writes the auth object to it
@@ -139,7 +139,7 @@ func TestRedirectUser(t *testing.T) {
 	rw := httptest.NewRecorder()
 
 	RedirectUser(samlSP, rw, req)
-		
+
 	if rw.Header().Get("Location") == "" && rw.Header().Get("Content-type") == "" {
 		t.Fatal("Expected Location or Content-type to be set in the header")
 	}
@@ -159,25 +159,25 @@ func TestGetPossibleRequestIDs(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "http://example.com", nil)
 	expire := time.Now().AddDate(0, 0, 1)
-    cookie := http.Cookie{"saml_response_token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}} 
-    req.AddCookie(&cookie)
+	cookie := http.Cookie{"saml_response_token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}}
+	req.AddCookie(&cookie)
 
-    ids := getPossibleRequestIDs(samlSP, req)
-    
-    if len(ids) < 1 {
-    	t.Fatal("Expected IDs on the request")
-    }
+	ids := getPossibleRequestIDs(samlSP, req)
 
-    if ids[0] != "dsadsa5767dsa45qwq" {
-    	t.Errorf("Expected id is  %s, got %s", "dsadsa5767dsa45qwq", ids[0])
-    } 
+	if len(ids) < 1 {
+		t.Fatal("Expected IDs on the request")
+	}
+
+	if ids[0] != "dsadsa5767dsa45qwq" {
+		t.Errorf("Expected id is  %s, got %s", "dsadsa5767dsa45qwq", ids[0])
+	}
 
 }
 
 func TestRandomBytes(t *testing.T) {
 	bytes := randomBytes(40)
 	if len(bytes) != 40 {
-		t.Fatal("Expected byte array of 40 elements")	
+		t.Fatal("Expected byte array of 40 elements")
 	}
 }
 

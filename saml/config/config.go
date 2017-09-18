@@ -16,7 +16,7 @@ type Config struct {
 // LoadConfig loads a Config from a configuration JSON file.
 func LoadConfig(confFile string) (*Config, error) {
 	if confFile == "" {
-		confFile = os.Getenv("SERVICE_CONFIG_FILE")	
+		confFile = os.Getenv("SERVICE_CONFIG_FILE")
 		if confFile == "" {
 			confFile = "config.json"
 		}
