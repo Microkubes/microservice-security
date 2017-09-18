@@ -12,6 +12,10 @@ import (
 	"time"
 	"context"
 	"strings"
+	"io/ioutil"
+	"os"
+
+	"gopkg.in/h2non/gock.v1"
 
 	"github.com/crewjam/saml/samlsp"
 	"github.com/dgrijalva/jwt-go"
@@ -174,5 +178,81 @@ func TestRandomBytes(t *testing.T) {
 	bytes := randomBytes(40)
 	if len(bytes) != 40 {
 		t.Fatal("Expected byte array of 40 elements")	
+	}
+}
+
+func TestRegisterUser(t *testing.T) {
+	config := []byte(`{
+	    "services": {
+	    	"microservice-registration": "https://127.0.0.1:8083/users",
+	    	"microservice-user": "http://127.0.0.1:8081/users"
+	    }
+	  }`)
+
+	err := ioutil.WriteFile("config.json", config, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove("config.json")
+
+	gock.New("https://127.0.0.1:8083").
+		Post("/users/register").
+		Reply(201).
+		JSON(map[string]interface{}{
+			"id":         "59804b3c0000000000000000",
+			"fullname":   "Jon Smith",
+			"username":   "jons",
+			"email":      "jon@test.com",
+			"externalId": "qwe04b3c000000qwertydgfsd",
+			"roles":      []string{"admin", "user"},
+			"active":     false,
+		})
+
+	user, err := registerUser("jon@test.com", "Jon", "Smith")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if user == nil {
+		t.Fatal("Nil user")
+	}
+}
+
+func TestFindUser(t *testing.T) {
+	config := []byte(`{
+	    "services": {
+	    	"microservice-registration": "https://127.0.0.1:8083/users",
+	    	"microservice-user": "http://127.0.0.1:8081/users"
+	    }
+	  }`)
+
+	err := ioutil.WriteFile("config.json", config, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove("config.json")
+
+	gock.New("http://127.0.0.1:8081").
+		Post("/users/find/email").
+		Reply(200).
+		JSON(map[string]interface{}{
+			"id":         "59804b3c0000000000000000",
+			"fullname":   "Jon Smith",
+			"username":   "jons",
+			"email":      "jon@test.com",
+			"externalId": "qwe04b3c000000qwertydgfsd",
+			"roles":      []string{"admin", "user"},
+			"active":     false,
+		})
+
+	user, err := findUser("jon@test.com")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if user == nil {
+		t.Fatal("Nil user")
 	}
 }
