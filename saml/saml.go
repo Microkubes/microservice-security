@@ -198,6 +198,7 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 	}
 }
 
+// getPossibleRequestIDs retrives the IDs of the SAML response
 func getPossibleRequestIDs(spMiddleware *samlsp.Middleware, r *http.Request) []string {
 	rv := []string{}
 	for _, cookie := range r.Cookies() {
@@ -229,6 +230,7 @@ func getPossibleRequestIDs(spMiddleware *samlsp.Middleware, r *http.Request) []s
 	return rv
 }
 
+// Generate n random bytes
 func randomBytes(n int) []byte {
 	rv := make([]byte, n)
 	if _, err := saml.RandReader.Read(rv); err != nil {
