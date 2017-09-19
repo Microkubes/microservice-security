@@ -4,25 +4,46 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/JormungandrK/authorization-server/config"
+	"github.com/JormungandrK/microservice-security/auth"
 	"github.com/ory/ladon"
 	uuid "github.com/satori/go.uuid"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
+// MongoPolicyRecord is an ACL policy stored in Mongodb.
 type MongoPolicyRecord struct {
-	ID          string   `json:"id" bson:"id"`
-	Description string   `json:"description" bson:"description"`
-	Subjects    []string `json:"subjects" bson:"subjects"`
-	Effect      string   `json:"effect" bson:"effect"`
-	Resources   []string `json:"resources" bson:"resources"`
-	Actions     []string `json:"actions" bson:"actions"`
-	CreatedAt   int64    `json:"createdAt" bson:"createdAt"`
-	Conditions  string   `json:"conditions" bson:"conditions"`
+	// The ID of the policy document
+	ID string `json:"id" bson:"id"`
+	// Description is the human readable description of the document.
+	Description string `json:"description" bson:"description"`
+	// List of subjects (may be patterns) to which this policy applies.
+	Subjects []string `json:"subjects" bson:"subjects"`
+
+	// Effect is the effect of this policy if applied to the requested resource. May be "allow" or "deny".
+	Effect string `json:"effect" bson:"effect"`
+
+	// Resources is a list of resources (may be patterns) to which this policy applies.
+	Resources []string `json:"resources" bson:"resources"`
+
+	// Actions is a list of actions (may be patterns) to which this policy applies.
+	Actions []string `json:"actions" bson:"actions"`
+
+	// CreatedAt is a timestamp of when this policy was created.
+	CreatedAt int64 `json:"createdAt" bson:"createdAt"`
+
+	// Conditions holds the conditions serialized as JSON string.
+	Conditions string `json:"conditions" bson:"conditions"`
+
+	// CreatedBy is the user id of the user who created this policy
+	CreatedBy string `json:"createdBy" bson:"createdBy"`
 }
 
+// MongoDBLadonManager holds the mongo collection for storing the ladon policies
+// in a Mongodb backend.
 type MongoDBLadonManager struct {
-	mgo.Collection
+	*mgo.Collection
 }
 
 func toMongoRecord(policy ladon.Policy) (*MongoPolicyRecord, error) {
@@ -67,6 +88,14 @@ func toLadonPolicy(mpr *MongoPolicyRecord) (ladon.Policy, error) {
 
 // Create persists the policy.
 func (m *MongoDBLadonManager) Create(policy ladon.Policy) error {
+	return fmt.Errorf("use MongoDBLadonManager.CreateWithAuth instead")
+}
+
+// CreateWithAuth persists the policy. It also sets the "createdBy" property to the provided authentication.
+func (m *MongoDBLadonManager) CreateWithAuth(policy ladon.Policy, authObj *auth.Auth) error {
+	if authObj == nil || authObj.UserID == "" {
+		return fmt.Errorf("no auth provided")
+	}
 	record, err := toMongoRecord(policy)
 	if err != nil {
 		return err
@@ -75,6 +104,9 @@ func (m *MongoDBLadonManager) Create(policy ladon.Policy) error {
 	if record.ID == "" {
 		record.ID = uuid.NewV4().String()
 	}
+
+	record.CreatedBy = authObj.UserID
+
 	return m.Collection.Insert(record)
 }
 
@@ -153,7 +185,7 @@ func (m *MongoDBLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Pol
 	// step 3 - match actions by regex in mongo
 	results := []MongoPolicyRecord{}
 	err := m.Collection.Find(bson.M{
-		"$or": []bson.M{
+		"$and": []bson.M{
 			bson.M{
 				"$where": fmt.Sprintf("this.resources.filter(function(rc){ return RegExp(rc).test('%s'); }).length > 0", r.Resource),
 			},
@@ -183,4 +215,40 @@ func (m *MongoDBLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Pol
 	// return all results back
 
 	return policies, nil
+}
+
+// NewMongoDBLadonManager builds a MongoDBLadonManager for the given database configuration.
+func NewMongoDBLadonManager(config *config.DBConfig) (*MongoDBLadonManager, error) {
+
+	session, err := mgo.DialWithInfo(&mgo.DialInfo{
+		Addrs:    []string{config.Host},
+		Username: config.Username,
+		Password: config.Password,
+		Database: config.DatabaseName,
+		Timeout:  30 * time.Second,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// SetMode - consistency mode for the session.
+	session.SetMode(mgo.Monotonic, true)
+
+	collection := session.DB(config.DatabaseName).C("ACL")
+
+	err = collection.EnsureIndex(mgo.Index{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	collection.EnsureIndex(mgo.Index{
+		Background: true,
+		Key:        []string{"id"},
+		DropDups:   true,
+		Unique:     true,
+	})
+
+	return &MongoDBLadonManager{
+		Collection: collection,
+	}, nil
 }
