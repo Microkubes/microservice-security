@@ -7,6 +7,7 @@ import (
 	"github.com/JormungandrK/authorization-server/config"
 	"github.com/JormungandrK/microservice-security/auth"
 	"github.com/ory/ladon"
+	"github.com/ory/ladon/compiler"
 	uuid "github.com/satori/go.uuid"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -41,6 +42,10 @@ type MongoPolicyRecord struct {
 
 	// CreatedBy is the user id of the user who created this policy
 	CreatedBy string `json:"createdBy" bson:"createdBy"`
+
+	CompiledActions   []string `json:"compiledActions" bson:"compiledActions"`
+	CompiledResources []string `json:"compiledResources" bson:"compiledResources"`
+	CompiledSubjects  []string `json:"compiledSubjects" bson:"compiledSubjects"`
 }
 
 // MongoDBLadonManager holds the mongo collection for storing the ladon policies
@@ -59,12 +64,40 @@ func toMongoRecord(policy ladon.Policy) (*MongoPolicyRecord, error) {
 		Subjects:    policy.GetSubjects(),
 	}
 
+	var err error
+	mpr.CompiledActions, err = getCompiledRegex(mpr.Actions, policy.GetStartDelimiter(), policy.GetEndDelimiter())
+	if err != nil {
+		return nil, err
+	}
+
+	mpr.CompiledResources, err = getCompiledRegex(mpr.Resources, policy.GetStartDelimiter(), policy.GetEndDelimiter())
+	if err != nil {
+		return nil, err
+	}
+	mpr.CompiledSubjects, err = getCompiledRegex(mpr.Subjects, policy.GetStartDelimiter(), policy.GetEndDelimiter())
+	if err != nil {
+		return nil, err
+	}
+
 	condJSON, err := policy.GetConditions().MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
 	mpr.Conditions = string(condJSON)
 	return &mpr, nil
+}
+
+func getCompiledRegex(values []string, startDelimiter byte, endDelimiter byte) ([]string, error) {
+	compiled := []string{}
+
+	for _, value := range values {
+		compValue, err := compiler.CompileRegex(value, startDelimiter, endDelimiter)
+		if err != nil {
+			return nil, err
+		}
+		compiled = append(compiled, compValue.String())
+	}
+	return compiled, nil
 }
 
 func toLadonPolicy(mpr *MongoPolicyRecord) (ladon.Policy, error) {
@@ -190,13 +223,13 @@ func (m *MongoDBLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Pol
 	err := m.Collection.Find(bson.M{
 		"$and": []bson.M{
 			bson.M{
-				"$where": fmt.Sprintf("this.resources.filter(function(rc){ return RegExp(rc).test('%s'); }).length > 0", r.Resource),
+				"$where": fmt.Sprintf("this.compiledResources.filter(function(rc){ return RegExp(rc).test('%s'); }).length > 0", r.Resource),
 			},
 			bson.M{
-				"$where": fmt.Sprintf("this.subjects.filter(function(sub){ return RegExp(sub).test('%s'); }).length > 0", r.Subject),
+				"$where": fmt.Sprintf("this.compiledSubjects.filter(function(sub){ return RegExp(sub).test('%s'); }).length > 0", r.Subject),
 			},
 			bson.M{
-				"$where": fmt.Sprintf("this.actions.filter(function(act){ return RegExp(act).test('%s'); }).length > 0", r.Action),
+				"$where": fmt.Sprintf("this.compiledActions.filter(function(act){ return RegExp(act).test('%s'); }).length > 0", r.Action),
 			},
 		},
 	}).All(&results)
