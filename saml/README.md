@@ -74,6 +74,20 @@ func NewSAMLSecurityMiddleware(cert string, key string) *samlsp.Middleware {
 }
 ```
 
+In the config.json file map of URLs for the internal services:
+```
+{
+	other config info here,
+ 	"services": {
+		"microservice-registration": "https://localhost:8083/users",
+		"microservice-user": "http://localhost:8081/users"
+	}
+}
+```
+
+In order to use Google as IdP you must use https over http. More details: 
+* Golang https: https://gist.github.com/denji/12b3a568f092ab951456
+
 More details on how to configure the SAML security are available on the following
 site:
  * Example: https://github.com/crewjam/saml
