@@ -14,10 +14,13 @@ import (
 
 // MongoPolicyRecord is an ACL policy stored in Mongodb.
 type MongoPolicyRecord struct {
+
 	// The ID of the policy document
 	ID string `json:"id" bson:"id"`
+
 	// Description is the human readable description of the document.
 	Description string `json:"description" bson:"description"`
+
 	// List of subjects (may be patterns) to which this policy applies.
 	Subjects []string `json:"subjects" bson:"subjects"`
 

@@ -18,21 +18,24 @@ type Configuration struct {
 	config.DBConfig
 }
 
+// AccessContext is a map string => interface used for additional ACL context data for the ACL check.
+type AccessContext map[string]interface{}
+
+type contextKey string
+
+var ladonWardenKey contextKey = "LadonWarden"
+
 // NewACLMiddleware instantiates new SecurityChainMiddleware for ACL.
-func NewACLMiddleware(conf *Configuration) (chain.SecurityChainMiddleware, error) {
-	mongoManager, err := NewMongoDBLadonManager(&conf.DBConfig)
-	if err != nil {
-		return nil, err
-	}
+func NewACLMiddleware(manager ladon.Manager) (chain.SecurityChainMiddleware, error) {
 
 	warden := ladon.Ladon{
-		Manager: mongoManager,
+		Manager: manager,
 	}
 
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, error) {
 
 		authObj := auth.GetAuth(ctx)
-		if authObj != nil {
+		if authObj == nil {
 			return ctx, rw, fmt.Errorf("No auth")
 		}
 
@@ -50,7 +53,7 @@ func NewACLMiddleware(conf *Configuration) (chain.SecurityChainMiddleware, error
 			Context:  aclContext,
 		}
 
-		return ctx, rw, warden.IsAllowed(&aclRequest)
+		return context.WithValue(ctx, ladonWardenKey, warden), rw, warden.IsAllowed(&aclRequest)
 	}, nil
 }
 
@@ -70,5 +73,41 @@ func getAction(req *http.Request) string {
 		return APIWriteAction
 	default:
 		return APIReadAction
+	}
+}
+
+// IsAllowed is a helper function that can be used inside a controller action to perform additional
+// checks for ACL when the default check is not enough. An example is prtotecting a resoruce to be accessed
+// only by its owner. The resource owner is not known until the resource is fetched from the database,
+// and the resource is not fetched util the actual action executes. In this scenario we can use
+// IsAllowed to check once we have the resource fetched from database.
+func IsAllowed(ctx context.Context, req *http.Request, subject string, aclContext AccessContext) error {
+	warden := ctx.Value(ladonWardenKey)
+
+	if warden == nil {
+		return fmt.Errorf("not ACL protected")
+	}
+
+	ladonWarden, ok := warden.(ladon.Warden)
+	if !ok {
+		return fmt.Errorf("warden is not ladon.Warden")
+	}
+
+	return ladonWarden.IsAllowed(toLadonRequest(req, subject, aclContext))
+}
+
+func toLadonRequest(req *http.Request, subject string, aclCtx AccessContext) *ladon.Request {
+
+	ladonCtx := ladon.Context{}
+
+	for key, val := range aclCtx {
+		ladonCtx[key] = val
+	}
+
+	return &ladon.Request{
+		Action:   getAction(req),
+		Resource: req.URL.Path,
+		Subject:  subject,
+		Context:  ladonCtx,
 	}
 }

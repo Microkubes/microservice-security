@@ -53,7 +53,7 @@ func (cond *AllowedPatternsCondition) Fulfills(value interface{}, r *ladon.Reque
 
 // AvailableConditions is the list of names of the available AllowedPatternsCondition conditions.
 // All of these are registered with ladon.
-var AvailableConditions = []string{"RolesCondition", "ScopesCondition"}
+var AvailableConditions = []string{"RolesCondition", "ScopesCondition", "OrganizationsCondition"}
 
 func init() {
 	// Register custom conditions
