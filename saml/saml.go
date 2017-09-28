@@ -95,7 +95,8 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 				buf, _ := xml.MarshalIndent(spMiddleware.ServiceProvider.Metadata(), "", "  ")
 				rw.Header().Set("Content-Type", "application/samlmetadata+xml")
 				rw.Write(buf)
-				return goa.ErrNotFound("SAML Metadata route not defined")
+				rw.WriteHeader(200)
+				return chain.BreakChain("SAML Metadata route not defined")
 			}
 
 			// Code used to generate token for testing
