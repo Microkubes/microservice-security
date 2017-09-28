@@ -254,7 +254,7 @@ func (m *MongoDBLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Pol
 }
 
 // NewMongoDBLadonManager builds a MongoDBLadonManager for the given database configuration.
-func NewMongoDBLadonManager(config *config.DBConfig) (*MongoDBLadonManager, error) {
+func NewMongoDBLadonManager(config *config.DBConfig) (*MongoDBLadonManager, func(), error) {
 
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs:    []string{config.Host},
@@ -264,27 +264,27 @@ func NewMongoDBLadonManager(config *config.DBConfig) (*MongoDBLadonManager, erro
 		Timeout:  30 * time.Second,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// SetMode - consistency mode for the session.
 	session.SetMode(mgo.Monotonic, true)
 
 	collection := session.DB(config.DatabaseName).C("ACL")
 
-	err = collection.EnsureIndex(mgo.Index{})
-
-	if err != nil {
-		return nil, err
-	}
-
-	collection.EnsureIndex(mgo.Index{
+	err = collection.EnsureIndex(mgo.Index{
 		Background: true,
 		Key:        []string{"id"},
 		DropDups:   true,
 		Unique:     true,
 	})
 
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return &MongoDBLadonManager{
-		Collection: collection,
-	}, nil
+			Collection: collection,
+		}, func() {
+			session.Close()
+		}, nil
 }
