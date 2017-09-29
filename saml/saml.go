@@ -116,7 +116,7 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 
 			cookie, err := req.Cookie(CookieName)
 			if err != nil {
-				// RedirectUser(spMiddleware, rw, req)
+				RedirectUser(spMiddleware, rw, req)
 				return goa.ErrUnauthorized(fmt.Sprintf("missing cookie %s", CookieName))
 			}
 
@@ -143,6 +143,8 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 			var userID string
 			attributes := tokenClaims.Attributes
 
+			fmt.Println(attributes)
+
 			if attributes["email"] != nil && attributes["firstname"] != nil && attributes["lastname"] != nil {
 				// User came from Google IdP.
 				email := attributes["email"][0]
@@ -167,15 +169,15 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 				}
 			} else {
 				// User came from custom IdP.
-				if _, ok := attributes["username"]; !ok {
+				if _, ok := attributes["givenName"]; !ok {
 					return jwt.NewValidationError("Username is missing form SAML token", jwt.ValidationErrorClaimsInvalid)
 				}
-				username = attributes["username"][0]
+				username = attributes["givenName"][0]
 
-				if _, ok := attributes["userId"]; !ok {
+				if _, ok := attributes["uid"]; !ok {
 					return jwt.NewValidationError("User ID is missing form SAML token", jwt.ValidationErrorClaimsInvalid)
 				}
-				userID = attributes["userId"][0]
+				userID = attributes["uid"][0]
 
 				if reflect.TypeOf(username).String() != "string" {
 					return jwt.NewValidationError("invalid username from SAML token", jwt.ValidationErrorClaimsInvalid)
@@ -187,7 +189,7 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 			}
 
 			authObj := &auth.Auth{
-				Roles:         attributes["roles"],
+				Roles:         attributes["eduPersonAffiliation"],
 				Organizations: attributes["organizations"],
 				Username:      username,
 				UserID:        userID,
