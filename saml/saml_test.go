@@ -99,10 +99,10 @@ func TestNewSAMLSecurityMiddleware(t *testing.T) {
 	claims := TokenClaims{}
 	claims.Audience = "http://localhost:8082/saml/metadata"
 	claims.Attributes = map[string][]string{
-		"userId":        []string{"59a006ae0000000000000000"},
-		"username":      []string{"test-user"},
-		"roles":         []string{"user, admin"},
-		"organizations": []string{"Ozrg1, Org2"},
+		"uid":                  []string{"59a006ae0000000000000000"},
+		"givenName":            []string{"test-user"},
+		"eduPersonAffiliation": []string{"user, admin"},
+		"organizations":        []string{"Ozrg1, Org2"},
 	}
 	tokenHS := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenStr, _ := tokenHS.SignedString(secret)
