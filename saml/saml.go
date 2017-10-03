@@ -365,7 +365,7 @@ func UnregisterSP(spMiddleware *samlsp.Middleware) {
 	client := &http.Client{}
 	output := make(chan *http.Response, 1)
 	errorsChan := hystrix.Go("identity-provider-microservice.delete-sp", func() error {
-		resp, err := deleteRequest(fmt.Sprintf("%s/services", config.Services["identity-provider"]), payload, client)
+		resp, err := deleteRequest(client, payload, fmt.Sprintf("%s/services", config.Services["identity-provider"]))
 		if err != nil {
 			return err
 		}
@@ -513,7 +513,7 @@ func postData(client *http.Client, payload []byte, url string) (*http.Response, 
 }
 
 // Because http.Client does not provide Delete method
-func deleteRequest(url string, payload []byte, client *http.Client) (*http.Response, error) {
+func deleteRequest(client *http.Client, payload []byte, url string) (*http.Response, error) {
 	req, err := http.NewRequest(http.MethodDelete, url, bytes.NewBuffer(payload))
 	if err != nil {
 		return nil, err

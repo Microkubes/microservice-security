@@ -305,3 +305,41 @@ func TestUnregisterSP(t *testing.T) {
 
 	UnregisterSP(samlSP)
 }
+
+func TestPostData(t *testing.T) {
+	payload := []byte(`{
+	    "data": "something"
+	  }`)
+	client := &http.Client{}
+
+	gock.New("http://test.com").
+		Post("/users").
+		Reply(201)
+
+	resp, err := postData(client, payload, "http://test.com/users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("Nil response")
+	}
+}
+
+func TestDeleteRequest(t *testing.T) {
+	payload := []byte(`{
+	    "data": "something"
+	  }`)
+	client := &http.Client{}
+
+	gock.New("http://test.com").
+		Delete("/users").
+		Reply(201)
+
+	resp, err := deleteRequest(client, payload, "http://test.com/users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("Nil response")
+	}
+}

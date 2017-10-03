@@ -25,12 +25,15 @@ func TestLoadConfig(t *testing.T) {
 
 	cnfFile.Sync()
 
-	loadedCnf, err := LoadConfig(cnfFile.Name())
+	_, err = LoadConfig("not-exists.json")
+	if err == nil {
+		t.Fatal("Nil error for invalid config file")
+	}
 
+	loadedCnf, err := LoadConfig(cnfFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if loadedCnf == nil {
 		t.Fatal("Configuration was not read")
 	}
