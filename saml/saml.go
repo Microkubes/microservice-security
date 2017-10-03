@@ -116,7 +116,7 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 
 			cookie, err := req.Cookie(CookieName)
 			if err != nil {
-				RedirectUser(spMiddleware, rw, req)
+				// RedirectUser(spMiddleware, rw, req)
 				return goa.ErrUnauthorized(fmt.Sprintf("missing cookie %s", CookieName))
 			}
 
@@ -142,8 +142,6 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 			var username string
 			var userID string
 			attributes := tokenClaims.Attributes
-
-			fmt.Println(attributes)
 
 			if attributes["email"] != nil && attributes["firstname"] != nil && attributes["lastname"] != nil {
 				// User came from Google IdP.
@@ -301,6 +299,99 @@ func RedirectUser(spMiddleware *samlsp.Middleware, rw http.ResponseWriter, req *
 	}
 }
 
+// RegisterSP sends SP metadata to the SAML IdP
+func RegisterSP(spMiddleware *samlsp.Middleware) (func(), error) {
+	config, err := config.LoadConfig("")
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := xml.MarshalIndent(spMiddleware.ServiceProvider.Metadata(), "", "  ")
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{}
+	output := make(chan *http.Response, 1)
+	errorsChan := hystrix.Go("identity-provider-microservice.add-sp", func() error {
+		resp, err := postData(client, payload, fmt.Sprintf("%s/services", config.Services["identity-provider"]))
+		if err != nil {
+			return err
+		}
+		output <- resp
+		return nil
+	}, nil)
+
+	var addSPResp *http.Response
+	select {
+	case out := <-output:
+		addSPResp = out
+	case respErr := <-errorsChan:
+		return nil, respErr
+	}
+
+	// Inspect status code from responses
+	body, err := ioutil.ReadAll(addSPResp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if addSPResp.StatusCode != 201 {
+		err := errors.New(string(body))
+		return nil, err
+	}
+
+	return func() {
+		UnregisterSP(spMiddleware)
+	}, nil
+}
+
+// UnregisterSP deletes SP from SAML IdP
+func UnregisterSP(spMiddleware *samlsp.Middleware) {
+	config, err := config.LoadConfig("")
+	if err != nil {
+		panic(err)
+	}
+
+	entityID := spMiddleware.ServiceProvider.Metadata().EntityID
+	data := map[string]string{
+		"serviceId": entityID,
+	}
+
+	payload, err := json.Marshal(data)
+	if err != nil {
+		panic(err)
+	}
+
+	client := &http.Client{}
+	output := make(chan *http.Response, 1)
+	errorsChan := hystrix.Go("identity-provider-microservice.delete-sp", func() error {
+		resp, err := deleteRequest(fmt.Sprintf("%s/services", config.Services["identity-provider"]), payload, client)
+		if err != nil {
+			return err
+		}
+		output <- resp
+		return nil
+	}, nil)
+
+	var deleteSPResp *http.Response
+	select {
+	case out := <-output:
+		deleteSPResp = out
+	case respErr := <-errorsChan:
+		panic(respErr)
+	}
+
+	// Inspect status code from responses
+	body, err := ioutil.ReadAll(deleteSPResp.Body)
+	if err != nil {
+		panic(err)
+	}
+	if deleteSPResp.StatusCode != 200 {
+		err := errors.New(string(body))
+		panic(err)
+	}
+}
+
 // Register the user, it creates a user and profile
 func registerUser(email, firstName, lastName string) (map[string]interface{}, error) {
 	config, err := config.LoadConfig("")
@@ -419,4 +510,18 @@ func findUser(email string) (map[string]interface{}, error) {
 func postData(client *http.Client, payload []byte, url string) (*http.Response, error) {
 	resp, err := client.Post(fmt.Sprintf("%s", url), "application/json", bytes.NewBuffer(payload))
 	return resp, err
+}
+
+// Because http.Client does not provide Delete method
+func deleteRequest(url string, payload []byte, client *http.Client) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodDelete, url, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
+	resp, error := client.Do(req)
+	if error != nil {
+		return resp, error
+	}
+
+	return resp, nil
 }

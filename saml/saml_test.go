@@ -256,3 +256,52 @@ func TestFindUser(t *testing.T) {
 		t.Fatal("Nil user")
 	}
 }
+
+func TestRegisterSP(t *testing.T) {
+	config := []byte(`{
+	    "services": {
+	    	"microservice-registration": "https://127.0.0.1:8083/users",
+	    	"microservice-user": "http://127.0.0.1:8081/users",
+	    	"identity-provider": "http://127.0.0.1:8081/saml/idp"
+	    }
+	  }`)
+
+	err := ioutil.WriteFile("config.json", config, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove("config.json")
+
+	gock.New("http://127.0.0.1:8081").
+		Post("/saml/idp/services").
+		Reply(201)
+
+	_, err = RegisterSP(samlSP)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUnregisterSP(t *testing.T) {
+	config := []byte(`{
+	    "services": {
+	    	"microservice-registration": "https://127.0.0.1:8083/users",
+	    	"microservice-user": "http://127.0.0.1:8081/users",
+	    	"identity-provider": "http://127.0.0.1:8081/saml/idp"
+	    }
+	  }`)
+
+	err := ioutil.WriteFile("config.json", config, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove("config.json")
+
+	gock.New("http://127.0.0.1:8081").
+		Delete("/saml/idp/services").
+		Reply(200)
+
+	UnregisterSP(samlSP)
+}
