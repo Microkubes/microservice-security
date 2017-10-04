@@ -5,14 +5,13 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
-	"github.com/JormungandrK/authorization-server/config"
 	"github.com/JormungandrK/microservice-security/auth"
 	"github.com/ory/ladon"
 	"github.com/ory/ladon/compiler"
 	uuid "github.com/satori/go.uuid"
 )
 
-var dbConfig = &config.DBConfig{
+var dbConfig = &DBConfig{
 	DatabaseName: "users",
 	Host:         "172.17.0.1:27017",
 	Username:     "restapi",
