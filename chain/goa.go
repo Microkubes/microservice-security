@@ -9,6 +9,25 @@ import (
 	"github.com/goadesign/goa"
 )
 
+// BreakChainError is a custom error for breaking the middleware chain.
+// When returned by a middleware, no error is thrown back but the handlers
+// chain is not continued.
+type BreakChainError struct {
+	message string
+}
+
+// Error returns the actual message for breaking the chain.
+func (b *BreakChainError) Error() string {
+	return b.message
+}
+
+// BreakChain returns a BreakChainError with the message given.
+func BreakChain(message string) error {
+	return &BreakChainError{
+		message: message,
+	}
+}
+
 // AsGoaMiddleware wraps a SecurityChain as a goa.Middleware that can later be used
 // with goa service and registered as a standard goa.Middleware.
 func AsGoaMiddleware(chain SecurityChain) goa.Middleware {
@@ -16,6 +35,9 @@ func AsGoaMiddleware(chain SecurityChain) goa.Middleware {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			ctx, rw, req, err := chain.Execute(ctx, rw, req)
 			if err != nil {
+				if _, ok := err.(*BreakChainError); ok {
+					return nil
+				}
 				return err
 			}
 			return hnd(ctx, rw, req)
