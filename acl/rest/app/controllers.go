@@ -34,13 +34,53 @@ func initService(service *goa.Service) {
 // AclController is the controller interface for the Acl actions.
 type AclController interface {
 	goa.Muxer
+	CreatePolicy(*CreatePolicyAclContext) error
+	DeletePolicy(*DeletePolicyAclContext) error
 	Get(*GetAclContext) error
+	ManageAccess(*ManageAccessAclContext) error
+	UpdatePolicy(*UpdatePolicyAclContext) error
 }
 
 // MountAclController "mounts" a Acl resource controller on the given service.
 func MountAclController(service *goa.Service, ctrl AclController) {
 	initService(service)
 	var h goa.Handler
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewCreatePolicyAclContext(ctx, req, service)
+		if err != nil {
+			return err
+		}
+		// Build the payload
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(*ACLPolicyPayload)
+		} else {
+			return goa.MissingPayloadError()
+		}
+		return ctrl.CreatePolicy(rctx)
+	}
+	service.Mux.Handle("POST", "/acl", ctrl.MuxHandler("createPolicy", h, unmarshalCreatePolicyAclPayload))
+	service.LogInfo("mount", "ctrl", "Acl", "action", "CreatePolicy", "route", "POST /acl")
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewDeletePolicyAclContext(ctx, req, service)
+		if err != nil {
+			return err
+		}
+		return ctrl.DeletePolicy(rctx)
+	}
+	service.Mux.Handle("DELETE", "/acl/:policyId", ctrl.MuxHandler("deletePolicy", h, nil))
+	service.LogInfo("mount", "ctrl", "Acl", "action", "DeletePolicy", "route", "DELETE /acl/:policyId")
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		// Check if there was an error loading the request
@@ -56,4 +96,91 @@ func MountAclController(service *goa.Service, ctrl AclController) {
 	}
 	service.Mux.Handle("GET", "/acl/:policyId", ctrl.MuxHandler("get", h, nil))
 	service.LogInfo("mount", "ctrl", "Acl", "action", "Get", "route", "GET /acl/:policyId")
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewManageAccessAclContext(ctx, req, service)
+		if err != nil {
+			return err
+		}
+		// Build the payload
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(*AccessPolicyPayload)
+		} else {
+			return goa.MissingPayloadError()
+		}
+		return ctrl.ManageAccess(rctx)
+	}
+	service.Mux.Handle("POST", "/acl/access", ctrl.MuxHandler("manage-access", h, unmarshalManageAccessAclPayload))
+	service.LogInfo("mount", "ctrl", "Acl", "action", "ManageAccess", "route", "POST /acl/access")
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewUpdatePolicyAclContext(ctx, req, service)
+		if err != nil {
+			return err
+		}
+		// Build the payload
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(*ACLPolicyPayload)
+		} else {
+			return goa.MissingPayloadError()
+		}
+		return ctrl.UpdatePolicy(rctx)
+	}
+	service.Mux.Handle("PUT", "/acl/:policyId", ctrl.MuxHandler("updatePolicy", h, unmarshalUpdatePolicyAclPayload))
+	service.LogInfo("mount", "ctrl", "Acl", "action", "UpdatePolicy", "route", "PUT /acl/:policyId")
+}
+
+// unmarshalCreatePolicyAclPayload unmarshals the request body into the context request data Payload field.
+func unmarshalCreatePolicyAclPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
+	payload := &aCLPolicyPayload{}
+	if err := service.DecodeRequest(req, payload); err != nil {
+		return err
+	}
+	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
+		return err
+	}
+	goa.ContextRequest(ctx).Payload = payload.Publicize()
+	return nil
+}
+
+// unmarshalManageAccessAclPayload unmarshals the request body into the context request data Payload field.
+func unmarshalManageAccessAclPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
+	payload := &accessPolicyPayload{}
+	if err := service.DecodeRequest(req, payload); err != nil {
+		return err
+	}
+	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
+		return err
+	}
+	goa.ContextRequest(ctx).Payload = payload.Publicize()
+	return nil
+}
+
+// unmarshalUpdatePolicyAclPayload unmarshals the request body into the context request data Payload field.
+func unmarshalUpdatePolicyAclPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
+	payload := &aCLPolicyPayload{}
+	if err := service.DecodeRequest(req, payload); err != nil {
+		return err
+	}
+	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
+		return err
+	}
+	goa.ContextRequest(ctx).Payload = payload.Publicize()
+	return nil
 }

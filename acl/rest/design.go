@@ -24,7 +24,50 @@ var _ = Resource("acl", func() {
 		Params(func() {
 			Param("policyId", String, "Policy ID")
 		})
+		Response(OK, ACLPolicyMedia)
+		Response(NotFound, ErrorMedia)
+		Response(InternalServerError, ErrorMedia)
 	})
+	Action("createPolicy", func() {
+		Description("Creates new ACL policy")
+		Routing(POST(""))
+		Payload(ACLPolicyPayload)
+		Response(Created, ACLPolicyMedia)
+		Response(BadRequest, ErrorMedia)
+		Response(InternalServerError, ErrorMedia)
+	})
+	Action("updatePolicy", func() {
+		Description("Updates an existing ACL Policy")
+		Routing(PUT("/:policyId"))
+		Params(func() {
+			Param("policyId", String, "The policy ID")
+		})
+		Payload(ACLPolicyPayload)
+		Response(OK, ACLPolicyMedia)
+		Response(BadRequest, ErrorMedia)
+		Response(NotFound, ErrorMedia)
+		Response(InternalServerError, ErrorMedia)
+	})
+	Action("deletePolicy", func() {
+		Description("Deletes an ACL policy")
+		Routing(DELETE("/:policyId"))
+		Params(func() {
+			Param("policyId", String, "The policy ID")
+		})
+		Response(OK)
+		Response(NotFound, ErrorMedia)
+		Response(InternalServerError, ErrorMedia)
+	})
+
+	Action("manage-access", func() {
+		Description("Allow or deny access to users of certain organization or particular users to particular resources.")
+		Routing(POST("/access"))
+		Payload(AccessPolicyPayload)
+		Response(OK, ACLPolicyMedia)
+		Response(BadRequest, ErrorMedia)
+		Response(InternalServerError, ErrorMedia)
+	})
+
 })
 
 var ACLPolicyMedia = MediaType("application/jormungandr-acl-policy+json", func() {
@@ -39,6 +82,7 @@ var ACLPolicyMedia = MediaType("application/jormungandr-acl-policy+json", func()
 		Attribute("resources", ArrayOf(String), "Resources to which this policy applies.")
 		Attribute("actions", ArrayOf(String), "Actions to match the request against.")
 		Attribute("conditions", ArrayOf(ConditionType), "Custom conditions")
+		Attribute("owner", String, "Owner of the policy")
 
 	})
 
@@ -63,6 +107,7 @@ var ACLPolicyPayload = Type("ACLPolicyPayload", func() {
 	Attribute("resources", ArrayOf(String), "Resources to which this policy applies.")
 	Attribute("actions", ArrayOf(String), "Actions to match the request against.")
 	Attribute("conditions", ArrayOf(ConditionType), "Custom conditions")
+	Required("resources", "effect", "subjects")
 })
 
 var ConditionType = Type("Condition", func() {
@@ -70,4 +115,17 @@ var ConditionType = Type("Condition", func() {
 	Attribute("name", String, "Condition name")
 	Attribute("type", String, "Condition type.")
 	Attribute("patterns", ArrayOf(String), "Patterns to match the value against.")
+	Required("name", "type", "patterns")
+})
+
+var AccessPolicyPayload = Type("AccessPolicyPayload", func() {
+	Description("Payload to allow or deny access to resources.")
+	Attribute("description", String, "Description of the policy")
+	Attribute("resources", ArrayOf(String), "Resources patterns")
+	Attribute("users", ArrayOf(String), "Users patterns")
+	Attribute("organizations", ArrayOf(String), "Organizations patterns")
+	Attribute("allow", Boolean, "Whether to allow access")
+	Attribute("scopes", ArrayOf(String), "Which scopes are allowed")
+	Attribute("roles", ArrayOf(String), "Which roles are allowed")
+	Required("resources", "allow")
 })

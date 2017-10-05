@@ -10,6 +10,10 @@
 
 package app
 
+import (
+	"github.com/goadesign/goa"
+)
+
 // ACLPolicy media type (default view)
 //
 // Identifier: application/jormungandr-acl-policy+json; view=default
@@ -28,4 +32,16 @@ type ACLPolicy struct {
 	Resources []string `form:"resources,omitempty" json:"resources,omitempty" xml:"resources,omitempty"`
 	// Subjects to match the request against.
 	Subjects []string `form:"subjects,omitempty" json:"subjects,omitempty" xml:"subjects,omitempty"`
+}
+
+// Validate validates the ACLPolicy media type instance.
+func (mt *ACLPolicy) Validate() (err error) {
+	for _, e := range mt.Conditions {
+		if e != nil {
+			if err2 := e.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
 }
