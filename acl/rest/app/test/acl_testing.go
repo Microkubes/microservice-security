@@ -14,14 +14,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/JormungandrK/microservice-security/acl/rest/app"
-	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/goatest"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+
+	"github.com/JormungandrK/microservice-security/acl/rest/app"
+	"github.com/goadesign/goa"
+	"github.com/goadesign/goa/goatest"
 )
 
 // CreatePolicyAclBadRequest runs the method CreatePolicy of the given controller with the given parameters and payload.
@@ -995,6 +996,7 @@ func UpdatePolicyAclInternalServerError(t goatest.TInterface, ctx context.Contex
 	u := &url.URL{
 		Path: fmt.Sprintf("/acl/%v", policyID),
 	}
+
 	req, _err := http.NewRequest("PUT", u.String(), nil)
 	if _err != nil {
 		panic("invalid test " + _err.Error()) // bug

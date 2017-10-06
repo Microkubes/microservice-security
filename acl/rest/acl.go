@@ -147,6 +147,9 @@ func (c *AclController) Get(ctx *app.GetAclContext) error {
 	if err != nil {
 		return ctx.InternalServerError(err)
 	}
+	if policy == nil {
+		return ctx.NotFound(fmt.Errorf("not-found"))
+	}
 	defPolicy, ok := policy.(*ladon.DefaultPolicy)
 	if !ok {
 		return ctx.InternalServerError(fmt.Errorf("unknown policy type"))
@@ -182,9 +185,9 @@ func (c *AclController) ManageAccess(ctx *app.ManageAccessAclContext) error {
 		return ctx.BadRequest(fmt.Errorf("at least one resource is required"))
 	}
 
-	effect := "Deny"
+	effect := "deny"
 	if aaPolicy.Allow {
-		effect = "Allow"
+		effect = "allow"
 	}
 
 	aclPolicy := &ladon.DefaultPolicy{
@@ -230,7 +233,6 @@ func (c *AclController) UpdatePolicy(ctx *app.UpdatePolicyAclContext) error {
 	if ctx.Payload.Description != nil {
 		description = *ctx.Payload.Description
 	}
-	var id string
 	if ctx.Payload.ID == nil {
 		return ctx.BadRequest(fmt.Errorf("policy id required"))
 	}
@@ -247,7 +249,7 @@ func (c *AclController) UpdatePolicy(ctx *app.UpdatePolicyAclContext) error {
 		return ctx.BadRequest(fmt.Errorf("at least one subject is required"))
 	}
 
-	existing, err := c.Manager.Get(id)
+	existing, err := c.Manager.Get(ctx.PolicyID)
 	if err != nil {
 		return ctx.InternalServerError(err)
 	}
@@ -259,7 +261,7 @@ func (c *AclController) UpdatePolicy(ctx *app.UpdatePolicyAclContext) error {
 		Actions:     ctx.Payload.Actions,
 		Description: description,
 		Effect:      ctx.Payload.Effect,
-		ID:          id,
+		ID:          ctx.PolicyID,
 		Resources:   ctx.Payload.Resources,
 		Subjects:    ctx.Payload.Subjects,
 		Conditions:  ladon.Conditions{},
