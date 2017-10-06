@@ -11,7 +11,9 @@ For details on SAML you can find many resources on the official site: http://sam
 
 ## Setting up the secret keys
 
-Create a directory in which you'll keep your key-pair:
+Service providers should use the same saml keys as SAML IdP.
+
+In order to create them create a directory in which you'll keep your key-pair:
 
 ```bash
 mkdir saml-keys
@@ -21,10 +23,10 @@ cd saml-keys
 Each service provider must have an self-signed X.509 key pair established. You can generate your own with something like this:
 
 ```bash
-openssl req -x509 -newkey rsa:2048 -keyout myservice.key -out myservice.cert -days 365 -nodes -subj "/CN=myservice.example.com"
+openssl req -x509 -newkey rsa:2048 -keyout service.key -out service.cert -days 365 -nodes -subj "/CN=myservice.example.com"
 ```
 
-**NOTE:** Make sure you have myservice.key and myservice.cert files in the saml-keys directory
+**NOTE:** Make sure you have service.key and service.cert files in the saml-keys directory
 
 ## Set up SAML in Goa
 
@@ -34,36 +36,44 @@ Create a security file app/security.go with the following content:
 package app
 
 import (
-	"github.com/crewjam/saml/samlsp"
-	"net/url"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/rsa"
+	"fmt"
+	"net/url"
+	"os"
+
+	"github.com/crewjam/saml/samlsp"
 )
 
 // NewSAMLSecurity creates a SAML security definition.
-func NewSAMLSecurityMiddleware(cert string, key string) *samlsp.Middleware {
+func NewSAMLSecurityMiddleware(cert, key string) *samlsp.Middleware {
 	keyPair, err := tls.LoadX509KeyPair(cert, key)
 	if err != nil {
 		panic(err)
 	}
 
 	keyPair.Leaf, err = x509.ParseCertificate(keyPair.Certificate[0])
-    if err != nil {
-        panic(err)
-    }
-
-	rootURL, err := url.Parse("http://localhost:8082")
 	if err != nil {
 		panic(err)
 	}
 
-   	idpMetadataURL, err := url.Parse("https://www.testshib.org/metadata/testshib-providers.xml")
+	gatewayURL := os.Getenv("API_GATEWAY_URL")
+	if gatewayURL == "" {
+		gatewayURL = "https://localhost:8082"
+	}
+
+	rootURL, err := url.Parse(fmt.Sprintf("%s/user-profile", gatewayURL))
 	if err != nil {
 		panic(err)
 	}
 
-	samlSP, _ := samlsp.New(samlsp.Options{
+	idpMetadataURL, err := url.Parse(fmt.Sprintf("%s/saml/idp/metadata", gatewayURL))
+	if err != nil {
+		panic(err)
+	}
+
+	samlSP, err := samlsp.New(samlsp.Options{
 		IDPMetadataURL: idpMetadataURL,
 		URL:            *rootURL,
 		Key:            keyPair.PrivateKey.(*rsa.PrivateKey),
@@ -109,13 +119,21 @@ import (
 func main() {
 	// Create new SAML security chain
   	// "saml-keys" is the directory containing the keys
-  	spMiddleware := app.NewSAMLSecurityMiddleware("saml-keys/myservice.cert", "saml-keys/myservice.key")
+  	spMiddleware := app.NewSAMLSecurityMiddleware("saml-keys/service.cert", "saml-keys/service.key")
 	SAMLMiddleware := saml.NewSAMLSecurity(spMiddleware)
 	sc := chain.NewSecurityChain().AddMiddleware(SAMLMiddleware)
 
     // other initializations here...
 
     service.Use(chain.AsGoaMiddleware(sc)) // attach the security chain as Goa middleware
+
+	// Send SP Metadata to the SAML IdP
+	unregisterSP, err := saml.RegisterSP(spMiddleware)
+	if err != nil {
+		service.LogError("setupSAML", "err", err)
+		return
+	}
+	defer unregisterSP()
 }
 
 ```
