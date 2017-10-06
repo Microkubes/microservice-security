@@ -17,11 +17,55 @@ type AclController struct {
 }
 
 // NewAclController creates a acl controller.
-func NewAclController(service *goa.Service, manager ladon.Manager) *AclController {
+func NewAclController(service *goa.Service, manager ladon.Manager) (*AclController, error) {
+	if err := addDefaultACLControllerPolicies(manager); err != nil {
+		return nil, err
+	}
 	return &AclController{
 		Controller: service.NewController("AclController"),
 		Manager:    manager,
+	}, nil
+}
+
+func addDefaultACLControllerPolicies(manager ladon.Manager) error {
+	// allow admin user to manage ACL policies
+	if err := addOrUpdatePolicy(&ladon.DefaultPolicy{
+		ID:          "admin-access-allow-all",
+		Description: "Allow Admin users to manage all ACL policies",
+		Actions:     []string{"api:read", "api:write"},
+		Effect:      ladon.AllowAccess,
+		Resources:   []string{"/acl/<.+>"},
+		Subjects:    []string{"<.+>"}, // all users
+	}, manager); err != nil {
+		return err
 	}
+
+	// allow access to the creator of the ACL policy
+	if err := addOrUpdatePolicy(&ladon.DefaultPolicy{
+		ID:          "owner-access-allow-all",
+		Description: "Allow the creator of the policies to manage its policies",
+		Actions:     []string{"api:read", "api:write"},
+		Effect:      ladon.AllowAccess,
+		Resources:   []string{"/acl/<.+>"},
+		Subjects:    []string{"<.+>"}, // all users
+		Conditions: ladon.Conditions{
+			"createdBy": &acl.OwnerCondition{},
+		},
+	}, manager); err != nil {
+		return err
+	}
+	return nil
+}
+
+func addOrUpdatePolicy(policy ladon.Policy, manager ladon.Manager) error {
+	existing, err := manager.Get(policy.GetID())
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		return nil
+	}
+	return manager.Create(policy)
 }
 
 // CreatePolicy runs the createPolicy action.

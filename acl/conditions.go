@@ -51,6 +51,21 @@ func (cond *AllowedPatternsCondition) Fulfills(value interface{}, r *ladon.Reque
 	return false
 }
 
+type OwnerCondition struct {
+}
+
+func (o *OwnerCondition) GetName() string {
+	return "OwnerCondition"
+}
+
+func (o *OwnerCondition) Fulfills(value interface{}, req *ladon.Request) bool {
+	if value == nil {
+		// Don't match owner if not set in the request.
+		return true
+	}
+	return value == req.Subject
+}
+
 // AvailableConditions is the list of names of the available AllowedPatternsCondition conditions.
 // All of these are registered with ladon.
 var AvailableConditions = []string{"RolesCondition", "ScopesCondition", "OrganizationsCondition"}
@@ -63,6 +78,9 @@ func init() {
 				Name: condName,
 			}
 		}
+	}
+	ladon.ConditionFactories["OwnerCondition"] = func() ladon.Condition {
+		return &OwnerCondition{}
 	}
 }
 

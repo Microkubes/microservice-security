@@ -24,6 +24,15 @@ type contextKey string
 
 var ladonWardenKey contextKey = "LadonWarden"
 
+type RequestContext struct {
+	Auth     *auth.Auth
+	Action   string
+	Subject  string
+	Scopes   []string
+	Resource string
+	AccessContext
+}
+
 // NewACLMiddleware instantiates new SecurityChainMiddleware for ACL.
 func NewACLMiddleware(manager ladon.Manager) (chain.SecurityChainMiddleware, error) {
 
@@ -93,6 +102,46 @@ func IsAllowed(ctx context.Context, req *http.Request, subject string, aclContex
 	}
 
 	return ladonWarden.IsAllowed(toLadonRequest(req, subject, aclContext))
+}
+
+func CheckRequest(ctx context.Context, req *RequestContext) error {
+	ladonReq := &ladon.Request{
+		Action:   req.Action,
+		Context:  ladon.Context{},
+		Resource: req.Resource,
+		Subject:  req.Subject,
+	}
+	cx := ladonReq.Context
+	cx["userId"] = req.Auth.UserID
+	cx["username"] = req.Auth.Username
+	cx["roles"] = req.Auth.Roles
+	cx["organizations"] = req.Auth.Organizations
+	cx["scopes"] = req.Scopes
+
+	warden, err := getLadonWarden(ctx)
+	if err != nil {
+		return err
+	}
+	if warden == nil {
+		return fmt.Errorf("no ACL warden")
+	}
+
+	return warden.IsAllowed(ladonReq)
+}
+
+func getLadonWarden(ctx context.Context) (ladon.Warden, error) {
+	warden := ctx.Value(ladonWardenKey)
+
+	if warden == nil {
+		return nil, nil
+	}
+
+	ladonWarden, ok := warden.(ladon.Warden)
+	if !ok {
+		return nil, fmt.Errorf("the warden is not ladon.Warden")
+	}
+
+	return ladonWarden, nil
 }
 
 func toLadonRequest(req *http.Request, subject string, aclCtx AccessContext) *ladon.Request {

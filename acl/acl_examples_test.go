@@ -1,6 +1,7 @@
 package acl
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/ory/ladon"
@@ -510,7 +511,8 @@ func TestAllowOnlyOwner(t *testing.T) {
 		Actions:     []string{"api:read"},
 		Effect:      ladon.AllowAccess,
 		Conditions: ladon.Conditions{
-			"owner": &ladon.EqualsSubjectCondition{},
+			//"owner": &ladon.EqualsSubjectCondition{},
+			"owner": &OwnerCondition{},
 		},
 	}
 
@@ -549,4 +551,12 @@ func TestAllowOnlyOwner(t *testing.T) {
 		t.Fatal("Access should be denied")
 	}
 	t.Log(err.Error())
+
+	err = warden.IsAllowed(&ladon.Request{
+		Action:   "api:read",  // mapped from the actual request (scope + HTTP action)
+		Resource: "/user/me",  // the actual resource asked
+		Subject:  "test-user", // username and/or role,
+		Context:  ladon.Context{},
+	})
+	fmt.Println("No owner set: ", err)
 }
