@@ -209,7 +209,7 @@ func TestRegisterUser(t *testing.T) {
 			"active":     false,
 		})
 
-	user, err := registerUser("jon@test.com", "Jon", "Smith")
+	user, err := registerUser("jon@test.com", "Jon", "Smith", samlSP)
 
 	if err != nil {
 		t.Fatal(err)
@@ -247,7 +247,7 @@ func TestFindUser(t *testing.T) {
 			"active":     false,
 		})
 
-	user, err := findUser("jon@test.com")
+	user, err := findUser("jon@test.com", samlSP)
 
 	if err != nil {
 		t.Fatal(err)
@@ -306,7 +306,7 @@ func TestUnregisterSP(t *testing.T) {
 	UnregisterSP(samlSP)
 }
 
-func TestPostData(t *testing.T) {
+func TestMakeRequest(t *testing.T) {
 	payload := []byte(`{
 	    "data": "something"
 	  }`)
@@ -316,7 +316,11 @@ func TestPostData(t *testing.T) {
 		Post("/users").
 		Reply(201)
 
-	resp, err := postData(client, payload, "http://test.com/users")
+	gock.New("http://test.com").
+		Delete("/users").
+		Reply(201)
+
+	resp, err := makeRequest(client, http.MethodPost, payload, "http://test.com/users", samlSP)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -325,21 +329,12 @@ func TestPostData(t *testing.T) {
 	}
 }
 
-func TestDeleteRequest(t *testing.T) {
-	payload := []byte(`{
-	    "data": "something"
-	  }`)
-	client := &http.Client{}
-
-	gock.New("http://test.com").
-		Delete("/users").
-		Reply(201)
-
-	resp, err := deleteRequest(client, payload, "http://test.com/users")
+func TestGenerateSAMLToken(t *testing.T) {
+	token, err := generateSAMLToken(samlSP)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil {
-		t.Fatal("Nil response")
+	if token == "" {
+		t.Fatal("empty token string")
 	}
 }
