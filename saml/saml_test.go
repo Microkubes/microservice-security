@@ -107,6 +107,7 @@ func TestNewSAMLSecurityMiddleware(t *testing.T) {
 	tokenHS := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenStr, _ := tokenHS.SignedString(secret)
 
+	rw := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://example.com", nil)
 	expire := time.Now().AddDate(0, 0, 1)
 	cookie := http.Cookie{"token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}}
@@ -121,7 +122,7 @@ func TestNewSAMLSecurityMiddleware(t *testing.T) {
 		// We want to pass these modified versions back to our chain.
 		modifiedCtx = c
 		return nil
-	})(ctx, nil, req)
+	})(ctx, rw, req)
 
 	if err != nil {
 		t.Fatal(err)
@@ -131,6 +132,100 @@ func TestNewSAMLSecurityMiddleware(t *testing.T) {
 
 	if !hasAuth {
 		t.Fatal("Expected authentication to be set!")
+	}
+}
+
+func TestNewSAMLSecurityMiddlewareExpiredToken(t *testing.T) {
+	secret := x509.MarshalPKCS1PrivateKey(samlSP.ServiceProvider.Key)
+	claims := TokenClaims{}
+	claims.Audience = "http://localhost:8082/saml/metadata"
+	claims.Attributes = map[string][]string{
+		"uid":                  []string{"59a006ae0000000000000000"},
+		"givenName":            []string{"test-user"},
+		"eduPersonAffiliation": []string{"user, admin"},
+		"organizations":        []string{"Ozrg1, Org2"},
+	}
+	claims.StandardClaims.ExpiresAt = 1507543075
+	tokenHS := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenStr, _ := tokenHS.SignedString(secret)
+
+	rw := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "http://example.com", nil)
+	expire := time.Now().AddDate(0, 0, 1)
+	cookie := http.Cookie{"token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}}
+	req.AddCookie(&cookie)
+
+	ctx := context.Background()
+	modifiedCtx := ctx
+	middleware := NewSAMLSecurityMiddleware(samlSP)
+	err = middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
+		// This handler is called AFTER the goa middleware executes.
+		// It modifies the context, writes the auth object to it
+		// We want to pass these modified versions back to our chain.
+		modifiedCtx = c
+		return nil
+	})(ctx, rw, req)
+
+	if err == nil {
+		t.Fatal("Nil error for expired SAML token")
+	}
+}
+
+func TestNewSAMLSecurityMiddlewareInvalidAudience(t *testing.T) {
+	secret := x509.MarshalPKCS1PrivateKey(samlSP.ServiceProvider.Key)
+	claims := TokenClaims{}
+	claims.Audience = "http://test.com/saml/metadata"
+	claims.Attributes = map[string][]string{
+		"uid":                  []string{"59a006ae0000000000000000"},
+		"givenName":            []string{"test-user"},
+		"eduPersonAffiliation": []string{"user, admin"},
+		"organizations":        []string{"Ozrg1, Org2"},
+	}
+	tokenHS := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenStr, _ := tokenHS.SignedString(secret)
+
+	rw := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "http://example.com", nil)
+	expire := time.Now().AddDate(0, 0, 1)
+	cookie := http.Cookie{"token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}}
+	req.AddCookie(&cookie)
+
+	ctx := context.Background()
+	modifiedCtx := ctx
+	middleware := NewSAMLSecurityMiddleware(samlSP)
+	err = middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
+		// This handler is called AFTER the goa middleware executes.
+		// It modifies the context, writes the auth object to it
+		// We want to pass these modified versions back to our chain.
+		modifiedCtx = c
+		return nil
+	})(ctx, rw, req)
+
+	if err == nil {
+		t.Fatal("Nil error, expected: 'invalid audience from SAML token, got http://test.com/saml/metadata, expected http://localhost:8082/saml/metadata'")
+	}
+}
+
+func TestNewSAMLSecurityMiddlewareEmptyToken(t *testing.T) {
+	rw := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "http://example.com", nil)
+	expire := time.Now().AddDate(0, 0, 1)
+	cookie := http.Cookie{"token", "", "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}}
+	req.AddCookie(&cookie)
+
+	ctx := context.Background()
+	modifiedCtx := ctx
+	middleware := NewSAMLSecurityMiddleware(samlSP)
+	err = middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
+		// This handler is called AFTER the goa middleware executes.
+		// It modifies the context, writes the auth object to it
+		// We want to pass these modified versions back to our chain.
+		modifiedCtx = c
+		return nil
+	})(ctx, rw, req)
+
+	if err == nil {
+		t.Fatal("Nil error, expected: 'invalid SAML token: token contains an invalid number of segments'")
 	}
 }
 
