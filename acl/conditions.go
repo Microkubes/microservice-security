@@ -51,13 +51,28 @@ func (cond *AllowedPatternsCondition) Fulfills(value interface{}, r *ladon.Reque
 	return false
 }
 
+// OwnerCondition is used to implement a special kind of condition for
+// checking the owner of a resource.
 type OwnerCondition struct {
 }
 
+// GetName returns the name of the condition - "OwnerCondition"
 func (o *OwnerCondition) GetName() string {
 	return "OwnerCondition"
 }
 
+// Fulfills checks if the request context contains an owner. If so, it checks if
+// the subject has the same value as the owner.
+// If no owner values is set, then the request is allowed.
+// The value of the owner is retrieved from the request context based on the name of the condition.
+// When setting the condition in a policy, it is associated with a name, for example:
+//   cond := &ladon.DefaultPolicy{
+//     conditions: ladon.Conditions{
+//       "createdBy": &OwnerCondition{},
+//     },
+//   }
+// In this example, the owner value is extracted from the property "createdBy"
+// of the request context.
 func (o *OwnerCondition) Fulfills(value interface{}, req *ladon.Request) bool {
 	if value == nil {
 		// Don't match owner if not set in the request.
