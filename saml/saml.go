@@ -1,10 +1,10 @@
 package saml
 
 import (
-	"context"
-	"crypto/x509"
-	// "crypto/tls"
 	"bytes"
+	"context"
+	// "crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/xml"
@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/JormungandrK/microservice-security/auth"
 	"github.com/JormungandrK/microservice-security/chain"
@@ -87,7 +88,7 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 				}
 
 				spMiddleware.Authorize(rw, req, assertion)
-				return goa.ErrNotFound("SAML ACS route not defined")
+				return chain.BreakChain("SAML ACS route not defined")
 			}
 
 			// Serve /saml/metadata
@@ -98,22 +99,6 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 				rw.WriteHeader(200)
 				return chain.BreakChain("SAML Metadata route not defined")
 			}
-
-			// Code used to generate token for testing
-			// sB := x509.MarshalPKCS1PrivateKey(spMiddleware.ServiceProvider.Key)
-			// claims := TokenClaims{}
-			// claims.Audience = "http://localhost:8082/saml/metadata"
-			// claims.Attributes = map[string]interface{}{
-			// 	"userId": "59b2e5120000000000000000",
-			// 	"username": "test-user",
-			// 	"roles": "user, admin",
-			// 	"organizations": "Ozrg1, Org2",
-			// }
-			// tokenHS := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-			// tokenStr, err := tokenHS.SignedString(sB)
-			// fmt.Println("===TOKEN===")
-			// fmt.Println(tokenStr)
-			// fmt.Println("===========")
 
 			cookie, err := req.Cookie(CookieName)
 			if err != nil {
@@ -150,10 +135,10 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 				firstName := attributes["firstname"][0]
 				lastName := attributes["lastname"][0]
 
-				user, _ := findUser(email)
+				user, _ := findUser(email, spMiddleware)
 
 				if user == nil {
-					user, err = registerUser(email, firstName, lastName)
+					user, err = registerUser(email, firstName, lastName, spMiddleware)
 
 					if err != nil {
 						return err
@@ -168,15 +153,15 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 				}
 			} else {
 				// User came from custom IdP.
-				if _, ok := attributes["username"]; !ok {
+				if _, ok := attributes["givenName"]; !ok {
 					return jwt.NewValidationError("Username is missing form SAML token", jwt.ValidationErrorClaimsInvalid)
 				}
-				username = attributes["username"][0]
+				username = attributes["givenName"][0]
 
-				if _, ok := attributes["userId"]; !ok {
+				if _, ok := attributes["uid"]; !ok {
 					return jwt.NewValidationError("User ID is missing form SAML token", jwt.ValidationErrorClaimsInvalid)
 				}
-				userID = attributes["userId"][0]
+				userID = attributes["uid"][0]
 
 				if reflect.TypeOf(username).String() != "string" {
 					return jwt.NewValidationError("invalid username from SAML token", jwt.ValidationErrorClaimsInvalid)
@@ -188,7 +173,7 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 			}
 
 			authObj := &auth.Auth{
-				Roles:         attributes["roles"],
+				Roles:         attributes["eduPersonAffiliation"],
 				Organizations: attributes["organizations"],
 				Username:      username,
 				UserID:        userID,
@@ -231,7 +216,7 @@ func getPossibleRequestIDs(spMiddleware *samlsp.Middleware, r *http.Request) []s
 	return rv
 }
 
-// Generate n random bytes
+// randomBytes generates n random bytes
 func randomBytes(n int) []byte {
 	rv := make([]byte, n)
 	if _, err := saml.RandReader.Read(rv); err != nil {
@@ -240,7 +225,7 @@ func randomBytes(n int) []byte {
 	return rv
 }
 
-// Redirect user to the IdP the is set in the metadata
+// RedirectUser redirects user to the IdP that is set in the metadata
 func RedirectUser(spMiddleware *samlsp.Middleware, rw http.ResponseWriter, req *http.Request) {
 	if req.URL.Path == spMiddleware.ServiceProvider.AcsURL.Path {
 		panic("don't wrap Middleware with RequireAccount")
@@ -300,8 +285,101 @@ func RedirectUser(spMiddleware *samlsp.Middleware, rw http.ResponseWriter, req *
 	}
 }
 
-// Register the user, it creates a user and profile
-func registerUser(email, firstName, lastName string) (map[string]interface{}, error) {
+// RegisterSP sends SP metadata to the SAML IdP
+func RegisterSP(spMiddleware *samlsp.Middleware) (func(), error) {
+	config, err := config.LoadConfig("")
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := xml.MarshalIndent(spMiddleware.ServiceProvider.Metadata(), "", "  ")
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{}
+	output := make(chan *http.Response, 1)
+	errorsChan := hystrix.Go("identity-provider-microservice.add-sp", func() error {
+		resp, err := makeRequest(client, http.MethodPost, payload, fmt.Sprintf("%s/services", config.Services["identity-provider"]), spMiddleware)
+		if err != nil {
+			return err
+		}
+		output <- resp
+		return nil
+	}, nil)
+
+	var addSPResp *http.Response
+	select {
+	case out := <-output:
+		addSPResp = out
+	case respErr := <-errorsChan:
+		return nil, respErr
+	}
+
+	// Inspect status code from responses
+	body, err := ioutil.ReadAll(addSPResp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if addSPResp.StatusCode != 201 {
+		err := errors.New(string(body))
+		return nil, err
+	}
+
+	return func() {
+		UnregisterSP(spMiddleware)
+	}, nil
+}
+
+// UnregisterSP deletes SP from SAML IdP
+func UnregisterSP(spMiddleware *samlsp.Middleware) {
+	config, err := config.LoadConfig("")
+	if err != nil {
+		panic(err)
+	}
+
+	entityID := spMiddleware.ServiceProvider.Metadata().EntityID
+	data := map[string]string{
+		"serviceId": entityID,
+	}
+
+	payload, err := json.Marshal(data)
+	if err != nil {
+		panic(err)
+	}
+
+	client := &http.Client{}
+	output := make(chan *http.Response, 1)
+	errorsChan := hystrix.Go("identity-provider-microservice.delete-sp", func() error {
+		resp, err := makeRequest(client, http.MethodDelete, payload, fmt.Sprintf("%s/services", config.Services["identity-provider"]), spMiddleware)
+		if err != nil {
+			return err
+		}
+		output <- resp
+		return nil
+	}, nil)
+
+	var deleteSPResp *http.Response
+	select {
+	case out := <-output:
+		deleteSPResp = out
+	case respErr := <-errorsChan:
+		panic(respErr)
+	}
+
+	// Inspect status code from responses
+	body, err := ioutil.ReadAll(deleteSPResp.Body)
+	if err != nil {
+		panic(err)
+	}
+	if deleteSPResp.StatusCode != 200 {
+		err := errors.New(string(body))
+		panic(err)
+	}
+}
+
+// registerUser registers the user, it creates a user and profile
+func registerUser(email string, firstName string, lastName string, spMiddleware *samlsp.Middleware) (map[string]interface{}, error) {
 	config, err := config.LoadConfig("")
 	if err != nil {
 		panic(err)
@@ -327,14 +405,14 @@ func registerUser(email, firstName, lastName string) (map[string]interface{}, er
 		return nil, err
 	}
 
-	//    tr := &http.Transport{
-	//        TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	//    }
+	// tr := &http.Transport{
+	// 	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	// }
 	// client := &http.Client{Transport: tr}
 	client := &http.Client{}
 	output := make(chan *http.Response, 1)
 	errorsChan := hystrix.Go("register-microservice.register_user", func() error {
-		resp, err := postData(client, payload, fmt.Sprintf("%s/register", config.Services["microservice-registration"]))
+		resp, err := makeRequest(client, http.MethodPost, payload, fmt.Sprintf("%s/register", config.Services["microservice-registration"]), spMiddleware)
 		if err != nil {
 			return err
 		}
@@ -364,8 +442,8 @@ func registerUser(email, firstName, lastName string) (map[string]interface{}, er
 	return resp, nil
 }
 
-// Retrive the user by email
-func findUser(email string) (map[string]interface{}, error) {
+// findUser retrives the user by email
+func findUser(email string, spMiddleware *samlsp.Middleware) (map[string]interface{}, error) {
 	config, err := config.LoadConfig("")
 	if err != nil {
 		panic(err)
@@ -383,7 +461,7 @@ func findUser(email string) (map[string]interface{}, error) {
 	client := &http.Client{}
 	output := make(chan *http.Response, 1)
 	errorsChan := hystrix.Go("user-microservice.find_by_email", func() error {
-		resp, err := postData(client, payload, fmt.Sprintf("%s/find/email", config.Services["microservice-user"]))
+		resp, err := makeRequest(client, http.MethodPost, payload, fmt.Sprintf("%s/find/email", config.Services["microservice-user"]), spMiddleware)
 		if err != nil {
 			return err
 		}
@@ -414,8 +492,40 @@ func findUser(email string) (map[string]interface{}, error) {
 	return resp, nil
 }
 
-// Make post request
-func postData(client *http.Client, payload []byte, url string) (*http.Response, error) {
-	resp, err := client.Post(fmt.Sprintf("%s", url), "application/json", bytes.NewBuffer(payload))
+// makeRequest makes http request
+func makeRequest(client *http.Client, method string, payload []byte, url string, spMiddleware *samlsp.Middleware) (*http.Response, error) {
+	req, err := http.NewRequest(method, url, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
+
+	expire := time.Now().AddDate(0, 0, 1)
+	tokenStr, err := generateSAMLToken(spMiddleware)
+	if err != nil {
+		return nil, err
+	}
+	cookie := http.Cookie{"token", tokenStr, "", "", expire, expire.Format(time.UnixDate), 86400, true, true, "", []string{}}
+	req.AddCookie(&cookie)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
 	return resp, err
+}
+
+// generateSAMLToken generate signed SAML token
+func generateSAMLToken(spMiddleware *samlsp.Middleware) (string, error) {
+	encodedPrivatekKey := x509.MarshalPKCS1PrivateKey(spMiddleware.ServiceProvider.Key)
+	claims := TokenClaims{}
+	claims.Audience = spMiddleware.ServiceProvider.Metadata().EntityID
+	claims.Attributes = map[string][]string{
+		"userId":   []string{"system"},
+		"username": []string{"system"},
+		"roles":    []string{"system"},
+	}
+	tokenHS := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenStr, err := tokenHS.SignedString(encodedPrivatekKey)
+
+	return tokenStr, err
 }

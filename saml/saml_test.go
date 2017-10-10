@@ -99,10 +99,10 @@ func TestNewSAMLSecurityMiddleware(t *testing.T) {
 	claims := TokenClaims{}
 	claims.Audience = "http://localhost:8082/saml/metadata"
 	claims.Attributes = map[string][]string{
-		"userId":        []string{"59a006ae0000000000000000"},
-		"username":      []string{"test-user"},
-		"roles":         []string{"user, admin"},
-		"organizations": []string{"Ozrg1, Org2"},
+		"uid":                  []string{"59a006ae0000000000000000"},
+		"givenName":            []string{"test-user"},
+		"eduPersonAffiliation": []string{"user, admin"},
+		"organizations":        []string{"Ozrg1, Org2"},
 	}
 	tokenHS := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenStr, _ := tokenHS.SignedString(secret)
@@ -209,7 +209,7 @@ func TestRegisterUser(t *testing.T) {
 			"active":     false,
 		})
 
-	user, err := registerUser("jon@test.com", "Jon", "Smith")
+	user, err := registerUser("jon@test.com", "Jon", "Smith", samlSP)
 
 	if err != nil {
 		t.Fatal(err)
@@ -247,12 +247,94 @@ func TestFindUser(t *testing.T) {
 			"active":     false,
 		})
 
-	user, err := findUser("jon@test.com")
+	user, err := findUser("jon@test.com", samlSP)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 	if user == nil {
 		t.Fatal("Nil user")
+	}
+}
+
+func TestRegisterSP(t *testing.T) {
+	config := []byte(`{
+	    "services": {
+	    	"microservice-registration": "https://127.0.0.1:8083/users",
+	    	"microservice-user": "http://127.0.0.1:8081/users",
+	    	"identity-provider": "http://127.0.0.1:8081/saml/idp"
+	    }
+	  }`)
+
+	err := ioutil.WriteFile("config.json", config, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove("config.json")
+
+	gock.New("http://127.0.0.1:8081").
+		Post("/saml/idp/services").
+		Reply(201)
+
+	_, err = RegisterSP(samlSP)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUnregisterSP(t *testing.T) {
+	config := []byte(`{
+	    "services": {
+	    	"microservice-registration": "https://127.0.0.1:8083/users",
+	    	"microservice-user": "http://127.0.0.1:8081/users",
+	    	"identity-provider": "http://127.0.0.1:8081/saml/idp"
+	    }
+	  }`)
+
+	err := ioutil.WriteFile("config.json", config, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove("config.json")
+
+	gock.New("http://127.0.0.1:8081").
+		Delete("/saml/idp/services").
+		Reply(200)
+
+	UnregisterSP(samlSP)
+}
+
+func TestMakeRequest(t *testing.T) {
+	payload := []byte(`{
+	    "data": "something"
+	  }`)
+	client := &http.Client{}
+
+	gock.New("http://test.com").
+		Post("/users").
+		Reply(201)
+
+	gock.New("http://test.com").
+		Delete("/users").
+		Reply(201)
+
+	resp, err := makeRequest(client, http.MethodPost, payload, "http://test.com/users", samlSP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("Nil response")
+	}
+}
+
+func TestGenerateSAMLToken(t *testing.T) {
+	token, err := generateSAMLToken(samlSP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if token == "" {
+		t.Fatal("empty token string")
 	}
 }
