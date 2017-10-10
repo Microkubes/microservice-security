@@ -102,7 +102,6 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 
 			cookie, err := req.Cookie(CookieName)
 			if err != nil {
-				// RedirectUser(spMiddleware, rw, req)
 				return goa.ErrUnauthorized(fmt.Sprintf("missing cookie %s", CookieName))
 			}
 
@@ -113,16 +112,20 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware) goa.Middleware {
 			})
 
 			if err != nil || !token.Valid {
-				return goa.ErrUnauthorized(fmt.Sprintf("invalid SAML token: %s", err))
+				RedirectUser(spMiddleware, rw, req)
+				return chain.BreakChain(fmt.Sprintf("invalid SAML token: %s", err))
 			}
 
 			if err := tokenClaims.StandardClaims.Valid(); err != nil {
-				return goa.ErrUnauthorized("invalid SAML token standard claims: %s", err)
+				RedirectUser(spMiddleware, rw, req)
+				return chain.BreakChain(fmt.Sprintf("invalid SAML token standard claims: %s", err))
 			}
 
 			// Audience basically identifies the audience [Service providers]. Audience is the EntityID of SP.
 			if tokenClaims.Audience != spMiddleware.ServiceProvider.Metadata().EntityID {
-				return goa.ErrUnauthorized("invalid audience from SAML token")
+				RedirectUser(spMiddleware, rw, req)
+				return chain.BreakChain(
+					fmt.Sprintf("invalid audience from SAML token, got %s, expected %s", tokenClaims.Audience, spMiddleware.ServiceProvider.Metadata().EntityID))
 			}
 
 			var username string
