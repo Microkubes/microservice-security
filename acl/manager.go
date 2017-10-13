@@ -255,7 +255,6 @@ func (m *MongoDBLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Pol
 
 // NewMongoDBLadonManager builds a MongoDBLadonManager for the given database configuration.
 func NewMongoDBLadonManager(config *config.DBConfig) (*MongoDBLadonManager, func(), error) {
-
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs:    []string{config.Host},
 		Username: config.Username,
