@@ -8,13 +8,14 @@ import (
 
 	"github.com/JormungandrK/microservice-security/auth"
 	"github.com/JormungandrK/microservice-security/chain"
+	"github.com/JormungandrK/microservice-tools/config"
 	"github.com/ory/ladon"
 )
 
 // Configuration is the configuration for the ACL middleware.
 type Configuration struct {
 	// DBConfig is the configuration for the ACL database.
-	DBConfig
+	config.DBConfig
 }
 
 // AccessContext is a map string => interface used for additional ACL context data for the ACL check.
