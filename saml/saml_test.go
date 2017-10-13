@@ -6,11 +6,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +16,7 @@ import (
 	"gopkg.in/h2non/gock.v1"
 
 	"github.com/JormungandrK/microservice-security/auth"
+	"github.com/JormungandrK/microservice-tools/config"
 	"github.com/crewjam/saml/samlsp"
 	"github.com/dgrijalva/jwt-go"
 )
@@ -80,15 +79,21 @@ UzreO96WzlBBMtY=
 
 var rootURL, _ = url.Parse("http://localhost:8082")
 var idpMetadataURL, _ = url.Parse("https://www.testshib.org/metadata/testshib-providers.xml")
-var samlSP, err = samlsp.New(samlsp.Options{
+var samlSP, _ = samlsp.New(samlsp.Options{
 	IDPMetadataURL: idpMetadataURL,
 	URL:            *rootURL,
 	Key:            key.(*rsa.PrivateKey),
 	Certificate:    cert,
 })
 
+var samlConfig = &config.SAMLConfig{
+	IdentityProviderURL:    "http://127.0.0.1:8081/saml/idp",
+	RegistrationServiceURL: "http://127.0.0.1:8081/users",
+	UserServiceURL:         "http://127.0.0.1:8081/users",
+}
+
 func TestNewSAMLSecurity(t *testing.T) {
-	middleware := NewSAMLSecurity(samlSP)
+	middleware := NewSAMLSecurity(samlSP, samlConfig)
 	if middleware == nil {
 		t.Fatal("Expected SAML middleware to be created!")
 	}
@@ -110,13 +115,25 @@ func TestNewSAMLSecurityMiddleware(t *testing.T) {
 	rw := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://example.com", nil)
 	expire := time.Now().AddDate(0, 0, 1)
-	cookie := http.Cookie{"token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}}
+	cookie := http.Cookie{
+		Name:       "token",
+		Value:      tokenStr,
+		Path:       "/",
+		Domain:     "www.example.com",
+		Expires:    expire,
+		RawExpires: expire.Format(time.UnixDate),
+		MaxAge:     86400,
+		Secure:     true,
+		HttpOnly:   true,
+		Raw:        "test=tcookie",
+		Unparsed:   []string{"test=tcookie"},
+	}
 	req.AddCookie(&cookie)
 
 	ctx := context.Background()
 	modifiedCtx := ctx
-	middleware := NewSAMLSecurityMiddleware(samlSP)
-	err = middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
+	middleware := NewSAMLSecurityMiddleware(samlSP, samlConfig)
+	err := middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
 		// This handler is called AFTER the goa middleware executes.
 		// It modifies the context, writes the auth object to it
 		// We want to pass these modified versions back to our chain.
@@ -152,13 +169,25 @@ func TestNewSAMLSecurityMiddlewareExpiredToken(t *testing.T) {
 	rw := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://example.com", nil)
 	expire := time.Now().AddDate(0, 0, 1)
-	cookie := http.Cookie{"token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}}
+	cookie := http.Cookie{
+		Name:       "token",
+		Value:      tokenStr,
+		Path:       "/",
+		Domain:     "www.example.com",
+		Expires:    expire,
+		RawExpires: expire.Format(time.UnixDate),
+		MaxAge:     86400,
+		Secure:     true,
+		HttpOnly:   true,
+		Raw:        "test=tcookie",
+		Unparsed:   []string{"test=tcookie"},
+	}
 	req.AddCookie(&cookie)
 
 	ctx := context.Background()
 	modifiedCtx := ctx
-	middleware := NewSAMLSecurityMiddleware(samlSP)
-	err = middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
+	middleware := NewSAMLSecurityMiddleware(samlSP, samlConfig)
+	err := middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
 		// This handler is called AFTER the goa middleware executes.
 		// It modifies the context, writes the auth object to it
 		// We want to pass these modified versions back to our chain.
@@ -187,13 +216,25 @@ func TestNewSAMLSecurityMiddlewareInvalidAudience(t *testing.T) {
 	rw := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://example.com", nil)
 	expire := time.Now().AddDate(0, 0, 1)
-	cookie := http.Cookie{"token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}}
+	cookie := http.Cookie{
+		Name:       "token",
+		Value:      tokenStr,
+		Path:       "/",
+		Domain:     "www.example.com",
+		Expires:    expire,
+		RawExpires: expire.Format(time.UnixDate),
+		MaxAge:     86400,
+		Secure:     true,
+		HttpOnly:   true,
+		Raw:        "test=tcookie",
+		Unparsed:   []string{"test=tcookie"},
+	}
 	req.AddCookie(&cookie)
 
 	ctx := context.Background()
 	modifiedCtx := ctx
-	middleware := NewSAMLSecurityMiddleware(samlSP)
-	err = middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
+	middleware := NewSAMLSecurityMiddleware(samlSP, samlConfig)
+	err := middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
 		// This handler is called AFTER the goa middleware executes.
 		// It modifies the context, writes the auth object to it
 		// We want to pass these modified versions back to our chain.
@@ -210,13 +251,25 @@ func TestNewSAMLSecurityMiddlewareEmptyToken(t *testing.T) {
 	rw := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://example.com", nil)
 	expire := time.Now().AddDate(0, 0, 1)
-	cookie := http.Cookie{"token", "", "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}}
+	cookie := http.Cookie{
+		Name:       "token",
+		Value:      "",
+		Path:       "/",
+		Domain:     "www.example.com",
+		Expires:    expire,
+		RawExpires: expire.Format(time.UnixDate),
+		MaxAge:     86400,
+		Secure:     true,
+		HttpOnly:   true,
+		Raw:        "test=tcookie",
+		Unparsed:   []string{"test=tcookie"},
+	}
 	req.AddCookie(&cookie)
 
 	ctx := context.Background()
 	modifiedCtx := ctx
-	middleware := NewSAMLSecurityMiddleware(samlSP)
-	err = middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
+	middleware := NewSAMLSecurityMiddleware(samlSP, samlConfig)
+	err := middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
 		// This handler is called AFTER the goa middleware executes.
 		// It modifies the context, writes the auth object to it
 		// We want to pass these modified versions back to our chain.
@@ -239,8 +292,8 @@ func TestRedirectUser(t *testing.T) {
 		t.Fatal("Expected Location or Content-type to be set in the header")
 	}
 
-	cookie_name := rw.Result().Cookies()[0].Name
-	if !strings.HasPrefix(cookie_name, "saml_") {
+	cookieName := rw.Result().Cookies()[0].Name
+	if !strings.HasPrefix(cookieName, "saml_") {
 		t.Fatal("Expected SAML request cookie to be set")
 	}
 }
@@ -254,7 +307,19 @@ func TestGetPossibleRequestIDs(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "http://example.com", nil)
 	expire := time.Now().AddDate(0, 0, 1)
-	cookie := http.Cookie{"saml_response_token", tokenStr, "/", "www.example.com", expire, expire.Format(time.UnixDate), 86400, true, true, "test=tcookie", []string{"test=tcookie"}}
+	cookie := http.Cookie{
+		Name:       "saml_response_token",
+		Value:      tokenStr,
+		Path:       "/",
+		Domain:     "www.example.com",
+		Expires:    expire,
+		RawExpires: expire.Format(time.UnixDate),
+		MaxAge:     86400,
+		Secure:     true,
+		HttpOnly:   true,
+		Raw:        "test=tcookie",
+		Unparsed:   []string{"test=tcookie"},
+	}
 	req.AddCookie(&cookie)
 
 	ids := getPossibleRequestIDs(samlSP, req)
@@ -277,21 +342,7 @@ func TestRandomBytes(t *testing.T) {
 }
 
 func TestRegisterUser(t *testing.T) {
-	config := []byte(`{
-	    "services": {
-	    	"microservice-registration": "https://127.0.0.1:8083/users",
-	    	"microservice-user": "http://127.0.0.1:8081/users"
-	    }
-	  }`)
-
-	err := ioutil.WriteFile("config.json", config, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove("config.json")
-
-	gock.New("https://127.0.0.1:8083").
+	gock.New("http://127.0.0.1:8081").
 		Post("/users/register").
 		Reply(201).
 		JSON(map[string]interface{}{
@@ -304,7 +355,7 @@ func TestRegisterUser(t *testing.T) {
 			"active":     false,
 		})
 
-	user, err := registerUser("jon@test.com", "Jon", "Smith", samlSP)
+	user, err := registerUser("jon@test.com", "Jon", "Smith", samlSP, samlConfig.RegistrationServiceURL)
 
 	if err != nil {
 		t.Fatal(err)
@@ -315,20 +366,6 @@ func TestRegisterUser(t *testing.T) {
 }
 
 func TestFindUser(t *testing.T) {
-	config := []byte(`{
-	    "services": {
-	    	"microservice-registration": "https://127.0.0.1:8083/users",
-	    	"microservice-user": "http://127.0.0.1:8081/users"
-	    }
-	  }`)
-
-	err := ioutil.WriteFile("config.json", config, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove("config.json")
-
 	gock.New("http://127.0.0.1:8081").
 		Post("/users/find/email").
 		Reply(200).
@@ -342,7 +379,7 @@ func TestFindUser(t *testing.T) {
 			"active":     false,
 		})
 
-	user, err := findUser("jon@test.com", samlSP)
+	user, err := findUser("jon@test.com", samlSP, samlConfig.UserServiceURL)
 
 	if err != nil {
 		t.Fatal(err)
@@ -353,52 +390,22 @@ func TestFindUser(t *testing.T) {
 }
 
 func TestRegisterSP(t *testing.T) {
-	config := []byte(`{
-	    "services": {
-	    	"microservice-registration": "https://127.0.0.1:8083/users",
-	    	"microservice-user": "http://127.0.0.1:8081/users",
-	    	"identity-provider": "http://127.0.0.1:8081/saml/idp"
-	    }
-	  }`)
-
-	err := ioutil.WriteFile("config.json", config, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove("config.json")
-
 	gock.New("http://127.0.0.1:8081").
 		Post("/saml/idp/services").
 		Reply(201)
 
-	_, err = RegisterSP(samlSP)
+	_, err := RegisterSP(samlSP, samlConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestUnregisterSP(t *testing.T) {
-	config := []byte(`{
-	    "services": {
-	    	"microservice-registration": "https://127.0.0.1:8083/users",
-	    	"microservice-user": "http://127.0.0.1:8081/users",
-	    	"identity-provider": "http://127.0.0.1:8081/saml/idp"
-	    }
-	  }`)
-
-	err := ioutil.WriteFile("config.json", config, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove("config.json")
-
 	gock.New("http://127.0.0.1:8081").
 		Delete("/saml/idp/services").
 		Reply(200)
 
-	UnregisterSP(samlSP)
+	UnregisterSP(samlSP, samlConfig)
 }
 
 func TestMakeRequest(t *testing.T) {
