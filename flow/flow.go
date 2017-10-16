@@ -17,6 +17,8 @@ import (
 	"github.com/goadesign/goa"
 )
 
+// CleanupFn defines a function used for cleanup. Usially you would like to defer this function
+// for after the whole process is done and you need to clen up before shutting down.
 type CleanupFn func()
 
 func newSAMLSecurity(gatewayURL string, conf *config.SAMLConfig) (chain.SecurityChainMiddleware, error) {
@@ -52,6 +54,7 @@ func newSAMLSecurity(gatewayURL string, conf *config.SAMLConfig) (chain.Security
 	return saml.NewSAMLSecurity(samlSP, conf), nil
 }
 
+// NewSecurityFromConfig sets up a full secrity chain froma a given service configuration.
 func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, CleanupFn, error) {
 	securityChain := chain.NewSecurityChain()
 
@@ -89,7 +92,7 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 	if cfg.SecurityConfig.SAMLConfig != nil {
 		samlMiddleware, err := newSAMLSecurity(cfg.GatewayURL, cfg.SAMLConfig)
 		if err != nil {
-			return nil, nil, err
+			return nil, func() {}, err
 		}
 		securityChain.AddMiddleware(samlMiddleware)
 	}
@@ -98,17 +101,17 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 		cfg.SecurityConfig.OAuth2Config == nil &&
 		cfg.SecurityConfig.SAMLConfig == nil {
 		// No security defined
-		return securityChain, nil, nil
+		return securityChain, func() {}, nil
 	}
 
 	manager, cleanup, err := acl.NewMongoDBLadonManager(&cfg.DBConfig)
 	if err != nil {
-		return nil, nil, err
+		return nil, func() {}, err
 	}
 
 	aclMiddleware, err := acl.NewACLMiddleware(manager)
 	if err != nil {
-		return nil, nil, err
+		return nil, func() {}, err
 	}
 
 	securityChain.
