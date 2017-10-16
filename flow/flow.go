@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/JormungandrK/microservice-security/acl"
+	"github.com/JormungandrK/microservice-security/auth"
 	"github.com/JormungandrK/microservice-security/chain"
 	"github.com/JormungandrK/microservice-security/jwt"
 	"github.com/JormungandrK/microservice-security/oauth2"
@@ -15,6 +16,7 @@ import (
 	"github.com/JormungandrK/microservice-tools/config"
 	"github.com/crewjam/saml/samlsp"
 	"github.com/goadesign/goa"
+	"github.com/ory/ladon"
 )
 
 // CleanupFn defines a function used for cleanup. Usially you would like to defer this function
@@ -109,6 +111,19 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 		return nil, func() {}, err
 	}
 
+	// add default "system" policies
+	err = addOrUpdatePolicy(&ladon.DefaultPolicy{
+		ID:          "system-access",
+		Actions:     []string{"api:read", "api:write"},
+		Description: "Default System level access to resources",
+		Effect:      ladon.AllowAccess,
+		Resources:   []string{"<.+>"},   // all resources
+		Subjects:    []string{"system"}, // only system
+	}, manager)
+	if err != nil {
+		panic(err)
+	}
+
 	aclMiddleware, err := acl.NewACLMiddleware(manager)
 	if err != nil {
 		return nil, func() {}, err
@@ -119,4 +134,20 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 		AddMiddleware(aclMiddleware)
 
 	return securityChain, cleanup, nil
+}
+
+func addOrUpdatePolicy(policy ladon.Policy, manager *acl.MongoDBLadonManager) error {
+	existing, err := manager.Get(policy.GetID())
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		return nil
+	}
+	authObj := auth.Auth{
+		Username: "system",
+		UserID:   "system",
+		Roles:    []string{"system"},
+	}
+	return manager.CreateWithAuth(policy, &authObj)
 }

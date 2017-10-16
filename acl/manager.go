@@ -173,6 +173,9 @@ func (m *MongoDBLadonManager) Get(id string) (ladon.Policy, error) {
 	}).One(&mpr)
 
 	if err != nil {
+		if err.Error() == "not found" {
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -249,7 +252,6 @@ func (m *MongoDBLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Pol
 	}
 
 	// return all results back
-
 	return policies, nil
 }
 
