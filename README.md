@@ -280,3 +280,85 @@ func main(){
 
 
 ```
+
+# Setting up a security for a microservice
+
+The easier way to set up a security is to use the ```flow``` package and the helper ```flow.NewSecurityFromConfig()```.
+
+In the microservice main file, you first need to load the microservice configuration.
+The pass the configuration to the helper and create new SecurityChain.
+
+Finally you need to add the security chain as a middleware to the service itself.
+
+```go
+func main(){
+
+  // 1. Load the configuration
+  conf, err := conf.LoadConfiguration("config.json")
+  if err {
+    // We have a problem loading the configuration
+    panic(err)
+  }
+
+  // 2. Create a security chain
+  securityChain, cleanup, err := flow.NewSecurityFromConfig(conf)
+  if err != nil {
+    // There was a problem setting up the security
+    panic(err)
+  }
+
+  defer cleanup()
+
+  // ... Goa service and controllers setup
+
+  // 3. Finally add the security chain to the service as a middleware.
+  service.Use(chain.AsGoaMiddleware(securityChain))
+
+}
+
+```
+
+Here is an example of the configuration file:
+
+```json
+{
+  "service":{
+    "name": "user-microservice",
+    "port": 8081,
+    "virtual_host": "user.services.jormungandr.org",
+    "hosts": ["localhost", "user.services.jormungandr.org"],
+    "weight": 10,
+    "slots": 100
+  },
+  "gatewayUrl": "http://localhost:8000",
+  "security":{
+    "keysDir": "keys",
+    "jwt":{
+      "name": "JWTSecurity",
+      "description": "JWT security middleware",
+      "tokenUrl": "http://localhost:8000/jwt"
+    },
+    "saml":{
+      "certFile": "keys/user-service.cert",
+      "keyFile": "keys/user-service.key",
+      "identityProviderUrl": "http://localhost:8000/saml/idp",
+      "userServiceUrl": "http://localhost:8000/user",
+      "registrationServiceUrl": "http://localhost:8000/user/register"
+    },
+    "oauth2":{
+      "description": "OAuth2 security middleware",
+      "tokenUrl": "https://localhost:8000/oauth2/token",
+      "authorizeUrl": "https://localhost:8000/oauth2/authorize"
+    }
+  },
+  "database":{
+    "host": "127.0.0.1:27017",
+    "database": "users",
+    "user": "restapi",
+    "pass": "restapi"
+  }
+}
+```
+
+Note that if you don't want to use any of the JWT, OAuth2 or SAML security middlewares,
+you can omit the approriate subsections ("jwt", "oauth2" or "saml") from the "security" section.
