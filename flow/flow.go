@@ -62,7 +62,7 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 
 	if cfg.SecurityConfig.JWTConfig != nil {
 		jwtSpec := &goa.JWTSecurity{
-			Name:        cfg.JWTConfig.Name,
+			Name:        "Authorization",
 			Description: cfg.JWTConfig.Description,
 			In:          goa.LocHeader,
 			Scopes: map[string]string{
