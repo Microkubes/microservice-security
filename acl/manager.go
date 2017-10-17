@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/JormungandrK/microservice-security/auth"
+	"github.com/JormungandrK/microservice-tools/config"
 	"github.com/ory/ladon"
 	"github.com/ory/ladon/compiler"
 	uuid "github.com/satori/go.uuid"
@@ -172,6 +173,9 @@ func (m *MongoDBLadonManager) Get(id string) (ladon.Policy, error) {
 	}).One(&mpr)
 
 	if err != nil {
+		if err.Error() == "not found" {
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -248,13 +252,11 @@ func (m *MongoDBLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Pol
 	}
 
 	// return all results back
-
 	return policies, nil
 }
 
 // NewMongoDBLadonManager builds a MongoDBLadonManager for the given database configuration.
-func NewMongoDBLadonManager(config *DBConfig) (*MongoDBLadonManager, func(), error) {
-
+func NewMongoDBLadonManager(config *config.DBConfig) (*MongoDBLadonManager, func(), error) {
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs:    []string{config.Host},
 		Username: config.Username,

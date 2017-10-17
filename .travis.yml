@@ -9,6 +9,7 @@ go:
   - 1.8.x
 
 before_install:
+  - git config --global url."git@github.com:".insteadOf "https://github.com/"
   - go get github.com/axw/gocov/gocov
   - go get github.com/AlekSi/gocov-xml
 
@@ -19,6 +20,7 @@ install:
   - go get -u github.com/afex/hystrix-go/hystrix
   - go get -u github.com/ory/ladon
   - go get -u gopkg.in/mgo.v2
+  - go get -u github.com/JormungandrK/microservice-tools
 
 before_script:
   - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter

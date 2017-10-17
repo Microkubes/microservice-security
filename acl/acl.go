@@ -8,13 +8,15 @@ import (
 
 	"github.com/JormungandrK/microservice-security/auth"
 	"github.com/JormungandrK/microservice-security/chain"
+	"github.com/JormungandrK/microservice-tools/config"
+	"github.com/goadesign/goa"
 	"github.com/ory/ladon"
 )
 
 // Configuration is the configuration for the ACL middleware.
 type Configuration struct {
 	// DBConfig is the configuration for the ACL database.
-	DBConfig
+	config.DBConfig
 }
 
 // AccessContext is a map string => interface used for additional ACL context data for the ACL check.
@@ -23,6 +25,8 @@ type AccessContext map[string]interface{}
 type contextKey string
 
 var ladonWardenKey contextKey = "LadonWarden"
+
+var forbidden = goa.NewErrorClass("Unauthorized", 403)
 
 // RequestContext holds the values for the request to an API action.
 // Holds the relevant values for the authentication and authorization.
@@ -70,7 +74,12 @@ func NewACLMiddleware(manager ladon.Manager) (chain.SecurityChainMiddleware, err
 			Context:  aclContext,
 		}
 
-		return context.WithValue(ctx, ladonWardenKey, warden), rw, warden.IsAllowed(&aclRequest)
+		var authErr error
+		if err := warden.IsAllowed(&aclRequest); err != nil {
+			authErr = forbidden(err)
+		}
+
+		return context.WithValue(ctx, ladonWardenKey, warden), rw, authErr
 	}, nil
 }
 
