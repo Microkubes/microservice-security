@@ -1,5 +1,9 @@
 # Microservice Security Shared library
 
+[![Build](https://travis-ci.com/JormungandrK/microservice-security.svg?token=UB5yzsLHNSbtjSYrGbWf&branch=master)](https://travis-ci.com/JormungandrK/microservice-security)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/c29a5eb496f7da156e83/test_coverage)](https://codeclimate.com/repos/59e72654b82c7d02b2001889/test_coverage)
+[![Maintainability](https://api.codeclimate.com/v1/badges/c29a5eb496f7da156e83/maintainability)](https://codeclimate.com/repos/59e72654b82c7d02b2001889/maintainability)
+
 This library contains functions that are commonly used by all microservices for
 setting up the security.
 Also exposes functions to set up different security mechanisms for securing the
