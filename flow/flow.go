@@ -23,7 +23,7 @@ import (
 // for after the whole process is done and you need to clen up before shutting down.
 type CleanupFn func()
 
-func newSAMLSecurity(gatewayURL string, conf *config.SAMLConfig) (chain.SecurityChainMiddleware, error) {
+func newSAMLSecurity(gatewayURL string, conf *config.SAMLConfig) (chain.SecurityChainMiddleware, *samlsp.Middleware, error) {
 	keyPair, err := tls.LoadX509KeyPair(conf.CertFile, conf.KeyFile)
 	if err != nil {
 		panic(err)
@@ -56,14 +56,21 @@ func newSAMLSecurity(gatewayURL string, conf *config.SAMLConfig) (chain.Security
 		Certificate:    keyPair.Leaf,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return saml.NewSAMLSecurity(samlSP, conf), nil
+	return saml.NewSAMLSecurity(samlSP, conf), samlSP, nil
 }
 
 // NewSecurityFromConfig sets up a full secrity chain froma a given service configuration.
 func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, CleanupFn, error) {
 	securityChain := chain.NewSecurityChain()
+	managerCleanup := func() {}
+	samlCleanup := func() {}
+
+	cleanup := func() {
+		managerCleanup()
+		samlCleanup()
+	}
 
 	if cfg.SecurityConfig.JWTConfig != nil {
 		jwtSpec := &goa.JWTSecurity{
@@ -97,10 +104,17 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 	}
 
 	if cfg.SecurityConfig.SAMLConfig != nil {
-		samlMiddleware, err := newSAMLSecurity(cfg.GatewayURL, cfg.SAMLConfig)
+		samlMiddleware, spMiddleware, err := newSAMLSecurity(cfg.GatewayURL, cfg.SAMLConfig)
 		if err != nil {
-			return nil, func() {}, err
+			return nil, cleanup, err
 		}
+
+		sc, err := saml.RegisterSP(spMiddleware, cfg.SAMLConfig)
+		if err != nil {
+			return nil, cleanup, err
+		}
+		samlCleanup = sc
+
 		securityChain.AddMiddleware(samlMiddleware)
 	}
 
@@ -108,13 +122,14 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 		cfg.SecurityConfig.OAuth2Config == nil &&
 		cfg.SecurityConfig.SAMLConfig == nil {
 		// No security defined
-		return securityChain, func() {}, nil
+		return securityChain, cleanup, nil
 	}
 
-	manager, cleanup, err := acl.NewMongoDBLadonManager(&cfg.DBConfig)
+	manager, mc, err := acl.NewMongoDBLadonManager(&cfg.DBConfig)
 	if err != nil {
-		return nil, func() {}, err
+		return nil, cleanup, err
 	}
+	managerCleanup = mc
 
 	// add default "system" policies
 	err = addOrUpdatePolicy(&ladon.DefaultPolicy{
@@ -131,7 +146,7 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 
 	aclMiddleware, err := acl.NewACLMiddleware(manager)
 	if err != nil {
-		return nil, func() {}, err
+		return nil, cleanup, err
 	}
 
 	securityChain.
