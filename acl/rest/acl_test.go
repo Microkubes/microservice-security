@@ -87,7 +87,7 @@ func contains(array []string, value string) bool {
 func TestCreatePolicyAclBadRequest(t *testing.T) {
 	service := goa.New("")
 
-	aclController, err := NewAclController(service, &DummyLadonManager{
+	aclController, err := NewACLController(service, &DummyLadonManager{
 		Policies: map[string]ladon.Policy{},
 	})
 
@@ -107,7 +107,7 @@ func TestCreatePolicyAclCreated(t *testing.T) {
 	manager := &DummyLadonManager{
 		Policies: map[string]ladon.Policy{},
 	}
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 
 	if err != nil {
 		t.Fatal(err)
@@ -148,7 +148,7 @@ func TestCreatePolicyAclInternalServerError(t *testing.T) {
 			return fmt.Errorf("simulated internal error")
 		},
 	}
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +193,7 @@ func TestDeletePolicyAclInternalServerError(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 
 	if err != nil {
 		t.Fatal(err)
@@ -219,7 +219,7 @@ func TestDeletePolicyAclNotFound(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 
 	if err != nil {
 		t.Fatal(err)
@@ -243,7 +243,7 @@ func TestDeletePolicyAclOK(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,7 +276,7 @@ func TestGetAclInternalServerError(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -297,7 +297,7 @@ func TestGetAclNotFound(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -333,7 +333,7 @@ func TestGetAclOK(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -353,7 +353,7 @@ func TestManageAccessAclBadRequest(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -382,7 +382,7 @@ func TestManageAccessAclInternalServerError(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -413,7 +413,7 @@ func TestManageAccessAclOK(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -434,8 +434,8 @@ func TestManageAccessAclOK(t *testing.T) {
 		t.Fatal("ACL Policy was not created")
 	}
 
-	for policyId, policy := range manager.Policies {
-		if contains([]string{"admin-access-allow-all", "owner-access-allow-all"}, policyId) {
+	for policyID, policy := range manager.Policies {
+		if contains([]string{"admin-access-allow-all", "owner-access-allow-all"}, policyID) {
 			continue
 		}
 		if !policy.AllowAccess() {
@@ -473,7 +473,7 @@ func TestUpdatePolicyAclBadRequest(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -511,7 +511,7 @@ func TestUpdatePolicyAclInternalServerError(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -542,7 +542,7 @@ func TestUpdatePolicyAclNotFound(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -582,7 +582,7 @@ func TestUpdatePolicyAclOK(t *testing.T) {
 		Organizations: []string{"org1"},
 	})
 
-	aclController, err := NewAclController(service, manager)
+	aclController, err := NewACLController(service, manager)
 	if err != nil {
 		t.Fatal(err)
 	}

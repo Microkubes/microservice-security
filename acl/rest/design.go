@@ -70,6 +70,7 @@ var _ = Resource("acl", func() {
 
 })
 
+// ACLPolicyMedia defines the media type used to render ACLPolicy.
 var ACLPolicyMedia = MediaType("application/jormungandr-acl-policy+json", func() {
 	TypeName("ACLPolicy")
 	Reference(ACLPolicyPayload)
@@ -98,6 +99,7 @@ var ACLPolicyMedia = MediaType("application/jormungandr-acl-policy+json", func()
 
 })
 
+// ACLPolicyPayload defines the payload for ACLPolicy.
 var ACLPolicyPayload = Type("ACLPolicyPayload", func() {
 	Description("ACL Policy Payload")
 	Attribute("id", String, "Policy ID")
@@ -110,6 +112,7 @@ var ACLPolicyPayload = Type("ACLPolicyPayload", func() {
 	Required("resources", "effect", "subjects")
 })
 
+// ConditionType defines the condition type.
 var ConditionType = Type("Condition", func() {
 	Description("Custom ACL policy condition")
 	Attribute("name", String, "Condition name")
@@ -118,6 +121,7 @@ var ConditionType = Type("Condition", func() {
 	Required("name", "type", "patterns")
 })
 
+// AccessPolicyPayload defines the payload for AccessPolicy.
 var AccessPolicyPayload = Type("AccessPolicyPayload", func() {
 	Description("Payload to allow or deny access to resources.")
 	Attribute("description", String, "Description of the policy")

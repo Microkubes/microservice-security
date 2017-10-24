@@ -10,18 +10,18 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-// AclController implements the acl resource.
-type AclController struct {
+// ACLController implements the acl resource.
+type ACLController struct {
 	*goa.Controller
 	ladon.Manager
 }
 
-// NewAclController creates a acl controller.
-func NewAclController(service *goa.Service, manager ladon.Manager) (*AclController, error) {
+// NewACLController creates a acl controller.
+func NewACLController(service *goa.Service, manager ladon.Manager) (*ACLController, error) {
 	if err := addDefaultACLControllerPolicies(manager); err != nil {
 		return nil, err
 	}
-	return &AclController{
+	return &ACLController{
 		Controller: service.NewController("AclController"),
 		Manager:    manager,
 	}, nil
@@ -69,7 +69,7 @@ func addOrUpdatePolicy(policy ladon.Policy, manager ladon.Manager) error {
 }
 
 // CreatePolicy runs the createPolicy action.
-func (c *AclController) CreatePolicy(ctx *app.CreatePolicyAclContext) error {
+func (c *ACLController) CreatePolicy(ctx *app.CreatePolicyAclContext) error {
 	// AclController_CreatePolicy: start_implement
 
 	description := ""
@@ -161,7 +161,7 @@ func toACLPolicyMedia(p *ladon.DefaultPolicy) *app.ACLPolicy {
 }
 
 // DeletePolicy runs the deletePolicy action.
-func (c *AclController) DeletePolicy(ctx *app.DeletePolicyAclContext) error {
+func (c *ACLController) DeletePolicy(ctx *app.DeletePolicyAclContext) error {
 	// AclController_DeletePolicy: start_implement
 	policy, err := c.Manager.Get(ctx.PolicyID)
 	if err != nil {
@@ -184,7 +184,7 @@ func (c *AclController) DeletePolicy(ctx *app.DeletePolicyAclContext) error {
 }
 
 // Get runs the get action.
-func (c *AclController) Get(ctx *app.GetAclContext) error {
+func (c *ACLController) Get(ctx *app.GetAclContext) error {
 	// AclController_Get: start_implement
 
 	policy, err := c.Manager.Get(ctx.PolicyID)
@@ -203,7 +203,7 @@ func (c *AclController) Get(ctx *app.GetAclContext) error {
 }
 
 // ManageAccess runs the manage-access action.
-func (c *AclController) ManageAccess(ctx *app.ManageAccessAclContext) error {
+func (c *ACLController) ManageAccess(ctx *app.ManageAccessAclContext) error {
 	// AclController_ManageAccess: start_implement
 
 	aaPolicy := ctx.Payload
@@ -270,7 +270,7 @@ func (c *AclController) ManageAccess(ctx *app.ManageAccessAclContext) error {
 }
 
 // UpdatePolicy runs the updatePolicy action.
-func (c *AclController) UpdatePolicy(ctx *app.UpdatePolicyAclContext) error {
+func (c *ACLController) UpdatePolicy(ctx *app.UpdatePolicyAclContext) error {
 	// AclController_UpdatePolicy: start_implement
 
 	description := ""
