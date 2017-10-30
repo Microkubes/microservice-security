@@ -134,7 +134,7 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 
 	securityChain.AddMiddleware(chain.CheckAuth)
 
-	if !cfg.ACLConfig.Disable {
+	if cfg.ACLConfig != nil && !cfg.ACLConfig.Disable {
 		manager, mc, err := acl.NewMongoDBLadonManager(&cfg.DBConfig)
 		if err != nil {
 			return nil, cleanup, err
