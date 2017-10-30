@@ -137,7 +137,6 @@ oXr7je6r64qfW2g1HWjG8ojXmmqbxZO5RURUgly9fUOkPBq-y5E2yq3mZ1FdPoqi7QQ9ZeUnRv4-m0q8
 Then you'll need to add the token in the ```Authorization``` HTTP header of the request.
 
 ```bash
-curl --header "Authorization: Bearer eyJ0eXAiOiJKV1Q...<full token here>...4pfw" "http://localhost:8080/user-profile/me"
+curl --header "Authorization: Bearer eyJ0eXAiOiJKV1Q...<full token here>...4pfw" "http://localhost:8080/profiles/me"
 
 ```
-

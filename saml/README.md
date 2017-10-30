@@ -63,7 +63,7 @@ func NewSAMLSecurityMiddleware(cert, key string) *samlsp.Middleware {
 		gatewayURL = "https://localhost:8082"
 	}
 
-	rootURL, err := url.Parse(fmt.Sprintf("%s/user-profile", gatewayURL))
+	rootURL, err := url.Parse(fmt.Sprintf("%s/users", gatewayURL))
 	if err != nil {
 		panic(err)
 	}
@@ -89,13 +89,13 @@ In the config.json file map of URLs for the internal services:
 {
 	other config info here,
  	"services": {
-		"microservice-registration": "https://localhost:8083/users",
-		"microservice-user": "http://localhost:8081/users"
+		"microservice-registration": "https://kong:8000/registration",
+		"microservice-user": "http://kong:8000/users"
 	}
 }
 ```
 
-In order to use Google as IdP you must use https over http. More details: 
+In order to use Google as IdP you must use https over http. More details:
 * Golang https: https://gist.github.com/denji/12b3a568f092ab951456
 
 More details on how to configure the SAML security are available on the following
@@ -155,4 +155,4 @@ wMDAwMDAwMCIsInVzZXJuYW1lIjoidGVzdC11c2VyIn19.vLl5hWsbYDSybhokeA4sFKJnZznesiUje5
 Then you will need to set up the cookie named "saml_token":
 ```bash
  curl -v -b "saml_token=eyJhbGciO...<full token here>...zsCYZzl4" http://localhost:8082/profiles/me
-``` 
+```
