@@ -162,7 +162,14 @@ func (m *MongoDBLadonManager) Update(policy ladon.Policy) error {
 	if _, ok := found["id"]; !ok {
 		return fmt.Errorf("not-found")
 	}
-	return m.Collection.UpdateId(found["id"], record)
+	if cb, ok := found["createdBy"]; ok {
+		record.CreatedBy = cb.(string)
+	}
+	if ca, ok := found["createdAt"]; ok {
+		record.CreatedAt = ca.(int64)
+	}
+
+	return m.Collection.UpdateId(found["_id"], record)
 }
 
 // Get retrieves a policy.
@@ -250,7 +257,6 @@ func (m *MongoDBLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Pol
 		}
 		policies = append(policies, policy)
 	}
-
 	// return all results back
 	return policies, nil
 }

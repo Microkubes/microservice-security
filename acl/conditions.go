@@ -34,11 +34,24 @@ func (cond *AllowedPatternsCondition) Fulfills(value interface{}, r *ladon.Reque
 	}
 
 	strVal, ok := value.(string)
-	if !ok {
-		return false
+	if ok {
+		return matchPatterns(strVal, cond.Values)
 	}
 
-	for _, allowedPattern := range cond.Values {
+	strValues, ok := value.([]string)
+	if ok {
+		for _, strVal := range strValues {
+			if matchPatterns(strVal, cond.Values) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func matchPatterns(strVal string, patterns []string) bool {
+	for _, allowedPattern := range patterns {
 		matches, err := regexp.MatchString(allowedPattern, strVal)
 		if err != nil {
 			return false
@@ -88,9 +101,10 @@ var AvailableConditions = []string{"RolesCondition", "ScopesCondition", "Organiz
 func init() {
 	// Register custom conditions
 	for _, condName := range AvailableConditions {
+		conditionName := condName
 		ladon.ConditionFactories[condName] = func() ladon.Condition {
 			return &AllowedPatternsCondition{
-				Name: condName,
+				Name: conditionName,
 			}
 		}
 	}

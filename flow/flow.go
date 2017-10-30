@@ -4,7 +4,9 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/url"
 
 	"github.com/JormungandrK/microservice-security/acl"
@@ -64,6 +66,11 @@ func newSAMLSecurity(gatewayURL string, conf *config.SAMLConfig) (chain.Security
 // NewSecurityFromConfig sets up a full secrity chain froma a given service configuration.
 func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, CleanupFn, error) {
 	securityChain := chain.NewSecurityChain()
+	if cfg.Disable {
+		log.Println("WARN: Security is disabled. Please check your configuration.")
+		return securityChain, func() {}, nil
+	}
+
 	managerCleanup := func() {}
 	samlCleanup := func() {}
 
@@ -125,33 +132,58 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 		return securityChain, cleanup, nil
 	}
 
-	manager, mc, err := acl.NewMongoDBLadonManager(&cfg.DBConfig)
-	if err != nil {
-		return nil, cleanup, err
-	}
-	managerCleanup = mc
+	securityChain.AddMiddleware(chain.CheckAuth)
 
-	// add default "system" policies
-	err = addOrUpdatePolicy(&ladon.DefaultPolicy{
-		ID:          "system-access",
-		Actions:     []string{"api:read", "api:write"},
-		Description: "Default System level access to resources",
-		Effect:      ladon.AllowAccess,
-		Resources:   []string{"<.+>"},   // all resources
-		Subjects:    []string{"system"}, // only system
-	}, manager)
-	if err != nil {
-		panic(err)
-	}
+	if !cfg.ACLConfig.Disable {
+		manager, mc, err := acl.NewMongoDBLadonManager(&cfg.DBConfig)
+		if err != nil {
+			return nil, cleanup, err
+		}
+		managerCleanup = mc
 
-	aclMiddleware, err := acl.NewACLMiddleware(manager)
-	if err != nil {
-		return nil, cleanup, err
-	}
+		// add default "system" policies
+		err = addOrUpdatePolicy(&ladon.DefaultPolicy{
+			ID:          "system-access",
+			Actions:     []string{"api:read", "api:write"},
+			Description: "Default System level access to resources",
+			Effect:      ladon.AllowAccess,
+			Resources:   []string{"<.+>"},   // all resources
+			Subjects:    []string{"system"}, // only system
+		}, manager)
+		if err != nil {
+			panic(err)
+		}
 
-	securityChain.
-		AddMiddleware(chain.CheckAuth).
-		AddMiddleware(aclMiddleware)
+		if cfg.ACLConfig.Policies != nil {
+			for _, policy := range cfg.ACLConfig.Policies {
+				ladonPolicy := &ladon.DefaultPolicy{
+					ID:          policy.ID,
+					Actions:     policy.Actions,
+					Description: policy.Description,
+					Effect:      policy.Effect,
+					Resources:   policy.Resources,
+					Subjects:    policy.Subjects,
+				}
+				if policy.Conditions != nil {
+					conditions, e := conditionsFromConfig(policy.Conditions)
+					if e != nil {
+						return nil, cleanup, e
+					}
+					ladonPolicy.Conditions = conditions
+				}
+				e := addOrUpdatePolicy(ladonPolicy, manager)
+				if e != nil {
+					return nil, cleanup, e
+				}
+			}
+		}
+
+		aclMiddleware, err := acl.NewACLMiddleware(manager)
+		if err != nil {
+			return nil, cleanup, err
+		}
+		securityChain.AddMiddleware(aclMiddleware)
+	}
 
 	return securityChain, cleanup, nil
 }
@@ -161,13 +193,27 @@ func addOrUpdatePolicy(policy ladon.Policy, manager *acl.MongoDBLadonManager) er
 	if err != nil {
 		return err
 	}
-	if existing != nil {
-		return nil
-	}
+
 	authObj := auth.Auth{
 		Username: "system",
 		UserID:   "system",
 		Roles:    []string{"system"},
 	}
+	if existing != nil {
+		return manager.Update(policy)
+	}
 	return manager.CreateWithAuth(policy, &authObj)
+}
+
+func conditionsFromConfig(conds map[string]interface{}) (ladon.Conditions, error) {
+	ladonConditions := ladon.Conditions{}
+
+	serConds, err := json.Marshal(conds)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ladonConditions.UnmarshalJSON(serConds)
+
+	return ladonConditions, err
 }
