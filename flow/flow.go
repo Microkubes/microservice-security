@@ -36,17 +36,12 @@ func newSAMLSecurity(gatewayURL string, conf *config.SAMLConfig) (chain.Security
 		panic(err)
 	}
 
-	u, err := url.Parse(gatewayURL)
+	rootURL, err := url.Parse(fmt.Sprintf("%s", conf.RootURL))
 	if err != nil {
 		panic(err)
 	}
 
-	rootURL, err := url.Parse(fmt.Sprintf("http://%s:8000/users", u.Hostname()))
-	if err != nil {
-		panic(err)
-	}
-
-	idpMetadataURL, err := url.Parse(fmt.Sprintf("http://%s:8000/saml/idp/metadata", u.Hostname()))
+	idpMetadataURL, err := url.Parse(fmt.Sprintf("%s/saml/idp/metadata", gatewayURL))
 	if err != nil {
 		panic(err)
 	}
