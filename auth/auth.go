@@ -8,7 +8,7 @@ import "golang.org/x/net/context"
 type Auth struct {
 	// UserID is the ID of the authenticated user.
 	UserID string
-	// Username is the username of the authenticated user.
+	// Username is the email of the authenticated user.
 	Username string
 
 	// Roles is the list of roles that the user has claimed and have been authorized by the system.
