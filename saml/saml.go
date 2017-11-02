@@ -54,8 +54,6 @@ type UserPayload struct {
 	Fullname string `form:"fullname" json:"fullname" xml:"fullname"`
 	// Roles of user
 	Roles []string `form:"roles" json:"roles" xml:"roles"`
-	// Name of user
-	Username string `form:"username" json:"username" xml:"username"`
 }
 
 // EmailPayload holds the email payload
@@ -129,13 +127,13 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware, samlConfig *conf
 					fmt.Sprintf("invalid audience from SAML token, got %s, expected %s", tokenClaims.Audience, spMiddleware.ServiceProvider.Metadata().EntityID))
 			}
 
-			var username string
+			var email string
 			var userID string
 			attributes := tokenClaims.Attributes
 
 			if attributes["email"] != nil && attributes["firstname"] != nil && attributes["lastname"] != nil {
 				// User came from Google IdP.
-				email := attributes["email"][0]
+				email = attributes["email"][0]
 				firstName := attributes["firstname"][0]
 				lastName := attributes["lastname"][0]
 
@@ -149,7 +147,6 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware, samlConfig *conf
 					}
 				}
 
-				username = user["username"].(string)
 				userID = user["id"].(string)
 
 				for _, v := range user["roles"].([]interface{}) {
@@ -157,18 +154,18 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware, samlConfig *conf
 				}
 			} else {
 				// User came from custom IdP.
-				if _, ok := attributes["givenName"]; !ok {
-					return jwt.NewValidationError("Username is missing form SAML token", jwt.ValidationErrorClaimsInvalid)
+				if _, ok := attributes["eduPersonPrincipalName"]; !ok {
+					return jwt.NewValidationError("Email is missing form SAML token", jwt.ValidationErrorClaimsInvalid)
 				}
-				username = attributes["givenName"][0]
+				email = attributes["eduPersonPrincipalName"][0]
 
 				if _, ok := attributes["uid"]; !ok {
 					return jwt.NewValidationError("User ID is missing form SAML token", jwt.ValidationErrorClaimsInvalid)
 				}
 				userID = attributes["uid"][0]
 
-				if reflect.TypeOf(username).String() != "string" {
-					return jwt.NewValidationError("invalid username from SAML token", jwt.ValidationErrorClaimsInvalid)
+				if reflect.TypeOf(email).String() != "string" {
+					return jwt.NewValidationError("invalid email from SAML token", jwt.ValidationErrorClaimsInvalid)
 				}
 
 				if reflect.TypeOf(userID).String() != "string" {
@@ -179,7 +176,7 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware, samlConfig *conf
 			authObj := &auth.Auth{
 				Roles:         attributes["eduPersonAffiliation"],
 				Organizations: attributes["organizations"],
-				Username:      username,
+				Username:      email,
 				UserID:        userID,
 			}
 
@@ -383,7 +380,6 @@ func registerUser(email string, firstName string, lastName string, spMiddleware 
 
 	user := UserPayload{
 		Fullname:   fmt.Sprintf("%s %s", firstName, lastName),
-		Username:   email,
 		Email:      email,
 		ExternalID: fmt.Sprintf("google: %s", email),
 		Roles:      []string{"user"},
