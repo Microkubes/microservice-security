@@ -36,7 +36,7 @@ type Client struct {
 	ClientID    string `json:"clientId, omitempty"`
 	Name        string `json:"name, omitempty"`
 	Description string `json:"description, omitempty"`
-	Website     string `json:"website, omitempty"`
+	Website     string `json:"domain, omitempty"`
 	Secret      string `json:"secret, omitempty"`
 }
 
