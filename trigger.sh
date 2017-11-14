@@ -3,7 +3,7 @@
 token='je8jYUctZxs_CvGiblNg3w'
 body='{ "request": {
 		"message": "Override the commit message: this is an api request",
-		"branch":"task-26",
+		"branch":"master",
 		"config":{
 			"env": {"TRIGGER": "yes"}
 		}

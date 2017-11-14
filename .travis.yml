@@ -31,4 +31,6 @@ script:
   - if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then ./cc-test-reporter upload-coverage -i coverage.json; fi
 
 after_success:
-  - ./trigger.sh;
+  - if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    ./trigger.sh;
+    fi
