@@ -215,6 +215,18 @@ func (provider *AuthProvider) Exchange(clientID, code, redirectURI string) (refr
 		return "", "", 0, InternalServerError("Failed to read user data", err)
 	}
 
+	if roles, ok := userData["roles"]; ok && roles != nil {
+		if rolesArr, ok := roles.([]interface{}); ok {
+			userData["roles"] = strings.Join(toArr(rolesArr), ",")
+		}
+	}
+
+	if orgs, ok := userData["organizations"]; ok && orgs != nil {
+		if orgsArr, ok := orgs.([]interface{}); ok {
+			userData["organizations"] = strings.Join(toArr(orgsArr), ",")
+		}
+	}
+
 	oauth2Token, err := provider.generateOAuthToken(clientID, clientAuth.Scope, userData)
 	if err != nil {
 		return "", "", 0, InternalServerError("Failed to generate access token and refresh token", err)
@@ -226,6 +238,18 @@ func (provider *AuthProvider) Exchange(clientID, code, redirectURI string) (refr
 	}
 
 	return oauth2Token.RefreshToken, oauth2Token.AccessToken, oauth2Token.ValidFor, nil
+}
+
+func toArr(genericArr []interface{}) []string {
+	sarr := []string{}
+	for _, element := range genericArr {
+		elStrl, ok := element.(string)
+		if !ok {
+			return []string{}
+		}
+		sarr = append(sarr, elStrl)
+	}
+	return sarr
 }
 
 // generateAccessToken generates new access token as JWT token with encoded user data and standard JWT claims.

@@ -7,16 +7,16 @@ import "golang.org/x/net/context"
 // Auth stores the Authorization and Authentication data for a particular user/client.
 type Auth struct {
 	// UserID is the ID of the authenticated user.
-	UserID string
+	UserID string `json:"userId,omitempty"`
 	// Username is the email of the authenticated user.
-	Username string
+	Username string `json:"username,omitempty"`
 
 	// Roles is the list of roles that the user has claimed and have been authorized by the system.
-	Roles []string
+	Roles []string `json:"roles,omitempty"`
 
 	// Organizations is the list of ogranizations that the user belongs to. This is a list of
 	// authorized ogranization based on the security claim.
-	Organizations []string
+	Organizations []string `json:"organizations,omitempty"`
 }
 
 // SecurityErrors holds the errors generated during validation of the request with a
