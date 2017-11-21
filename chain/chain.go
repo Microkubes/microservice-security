@@ -3,6 +3,7 @@ package chain
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"context"
 )
@@ -42,11 +43,14 @@ type SecurityChain interface {
 	// http.ResponseWriter and *http.Request. This may be different from the parameters passed to the function.
 	// If an error occured during executing the chain, and error is returned.
 	Execute(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, *http.Request, error)
+
+	AddIgnorePattern(pattern string) error
 }
 
 // Chain represents a SecurityChain and holds a list of all SecurityChainMiddleware in the order as they are added.
 type Chain struct {
 	MiddlewareList []SecurityChainMiddleware
+	IgnorePatterns []*regexp.Regexp
 }
 
 // AddMiddleware appends a SecurityChainMiddleware to the end of middleware list in the chain.
@@ -70,6 +74,9 @@ func (chain *Chain) AddMiddlewareType(middlewareType string) (SecurityChain, err
 // Execute executes the security chain by calling all SecurityChainMiddleware in the middleware list in the
 // order as they are added.
 func (chain *Chain) Execute(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, *http.Request, error) {
+	if chain.isRequestIgnoredPattern(req) {
+		return ctx, rw, req, nil
+	}
 	var err error
 	for _, middleware := range chain.MiddlewareList {
 		ctx, rw, err = middleware(ctx, rw, req)
@@ -78,6 +85,28 @@ func (chain *Chain) Execute(ctx context.Context, rw http.ResponseWriter, req *ht
 		}
 	}
 	return ctx, rw, req, nil
+}
+
+func (chain *Chain) isRequestIgnoredPattern(req *http.Request) bool {
+	if chain.IgnorePatterns == nil {
+		return false
+	}
+	path := req.URL.Path
+	for _, pattern := range chain.IgnorePatterns {
+		if pattern.MatchString(path) {
+			return true
+		}
+	}
+	return false
+}
+
+func (chain *Chain) AddIgnorePattern(pattern string) error {
+	reg, err := regexp.Compile(pattern)
+	if err != nil {
+		return err
+	}
+	chain.IgnorePatterns = append(chain.IgnorePatterns, reg)
+	return nil
 }
 
 // SecurityMiddlewareBuilders is a map that maps a security type to a specific MiddlewareBuilder.

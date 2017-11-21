@@ -66,6 +66,14 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 		return securityChain, func() {}, nil
 	}
 
+	if cfg.IgnorePatterns != nil {
+		for _, pattern := range cfg.IgnorePatterns {
+			if err := securityChain.AddIgnorePattern(pattern); err != nil {
+				return nil, func() {}, err
+			}
+		}
+	}
+
 	managerCleanup := func() {}
 	samlCleanup := func() {}
 
