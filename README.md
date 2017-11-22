@@ -285,6 +285,45 @@ func main(){
 
 ```
 
+# Allowing access to public resources
+
+To allow access to a public resource you need to specify an ignore pattern to the security chain.
+The patterns are regular expressions to which the request Path is matched against. If the path
+matches the ignore pattern regexp, then the chain does not execute and the handling of the
+request is passed down the next middlewares.
+
+Here's an example on how to add ignore pattern to the security chain:
+
+```Go
+
+func main(){
+  securityChain := chain.NewSecurityChain()
+  // Add the ignore patterns:
+  // - everything under /public/
+  // - CSS, Javascript and HTML files
+
+  // Note that the order does not matter
+  securityChain.AddIgnorePattern("/public/.+")
+  securityChain.AddIgnorePattern(".+\\.js")
+  securityChain.AddIgnorePattern(".+\\.css")
+  securityChain.AddIgnorePattern(".+\\.html")
+
+  // Add your middleware functions next
+  securityChain.AddMiddleware(MiddlewareOne)
+  securityChain.AddMiddleware(MiddlewareTwo)
+
+  // Note that the order of adding patterns and middleware functions does not matter,
+  // you can add the middleware first, then the ignore patterns.
+
+}
+
+```
+
+If you are setting up the chain using the provided builders in package "flow", then
+you can add the ignore patterns in the configuration. The configuration property name
+is ```ignorePatterns``` and accepts and array of strings.
+
+
 # Setting up a security for a microservice
 
 The easier way to set up a security is to use the ```flow``` package and the helper ```flow.NewSecurityFromConfig()```.
@@ -337,6 +376,7 @@ Here is an example of the configuration file:
   "gatewayUrl": "http://localhost:8000",
   "security":{
     "keysDir": "keys",
+    "ignorePatterns": ["/public-resource/.+", ".+\\.js", ".+\\.css", ".+\\.html"],
     "jwt":{
       "name": "JWTSecurity",
       "description": "JWT security middleware",

@@ -2,6 +2,7 @@ package chain
 
 import (
 	"net/http"
+	"regexp"
 	"testing"
 
 	"context"
@@ -191,5 +192,32 @@ func TestAsSecurityMiddleware(t *testing.T) {
 
 	if !innerMiddlewareCalled {
 		t.Fatal("Expected the middleware in the inner security chain to be called.")
+	}
+}
+
+func TestIgnorePatterns(t *testing.T) {
+	securityChain := &Chain{
+		IgnorePatterns: []*regexp.Regexp{},
+		MiddlewareList: []SecurityChainMiddleware{},
+	}
+	calledPaths := map[string]bool{}
+	securityChain.AddMiddleware(func(c context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, error) {
+		calledPaths[req.URL.Path] = true
+		return c, rw, nil
+	})
+	securityChain.AddIgnorePattern("/public/.+")
+
+	req, _ := http.NewRequest("GET", "http://example.com/my-resource", nil)
+	securityChain.Execute(context.Background(), nil, req)
+
+	req, _ = http.NewRequest("GET", "http://example.com/public/style.css", nil)
+	securityChain.Execute(context.Background(), nil, req)
+
+	if _, ok := calledPaths["/my-resource"]; !ok {
+		t.Fatal("Expected to call resources that are not ignored")
+	}
+
+	if _, ok := calledPaths["/public/style.css"]; ok {
+		t.Fatal("Expected to not call chain for ignored paths.")
 	}
 }

@@ -44,6 +44,12 @@ type SecurityChain interface {
 	// If an error occured during executing the chain, and error is returned.
 	Execute(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, *http.Request, error)
 
+	// AddIgnorePattern adds a pattern for the request path that will be ignored by this chain.
+	// The request path will be matched against the ignore patterns and if match is found, then
+	// the chain will not be executed and the request processing will be passed through.
+	// This is useful for public resources for which we don't check the auth.
+	// If the pattern is invalid, an error will be returned and the pattern is not added to the
+	// list of ignore patterns.
 	AddIgnorePattern(pattern string) error
 }
 
@@ -100,6 +106,10 @@ func (chain *Chain) isRequestIgnoredPattern(req *http.Request) bool {
 	return false
 }
 
+// AddIgnorePattern adds an ignore pattern to this security chain.
+// The pattern is compiled to a regular expression and must be valid
+// regular expression. If the pattern is not valid, an error will be
+// returned and the pattern is not added to the list of ignore patterns.
 func (chain *Chain) AddIgnorePattern(pattern string) error {
 	reg, err := regexp.Compile(pattern)
 	if err != nil {
