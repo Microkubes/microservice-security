@@ -3,6 +3,7 @@ package chain
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"context"
 )
@@ -42,11 +43,20 @@ type SecurityChain interface {
 	// http.ResponseWriter and *http.Request. This may be different from the parameters passed to the function.
 	// If an error occured during executing the chain, and error is returned.
 	Execute(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, *http.Request, error)
+
+	// AddIgnorePattern adds a pattern for the request path that will be ignored by this chain.
+	// The request path will be matched against the ignore patterns and if match is found, then
+	// the chain will not be executed and the request processing will be passed through.
+	// This is useful for public resources for which we don't check the auth.
+	// If the pattern is invalid, an error will be returned and the pattern is not added to the
+	// list of ignore patterns.
+	AddIgnorePattern(pattern string) error
 }
 
 // Chain represents a SecurityChain and holds a list of all SecurityChainMiddleware in the order as they are added.
 type Chain struct {
 	MiddlewareList []SecurityChainMiddleware
+	IgnorePatterns []*regexp.Regexp
 }
 
 // AddMiddleware appends a SecurityChainMiddleware to the end of middleware list in the chain.
@@ -70,6 +80,9 @@ func (chain *Chain) AddMiddlewareType(middlewareType string) (SecurityChain, err
 // Execute executes the security chain by calling all SecurityChainMiddleware in the middleware list in the
 // order as they are added.
 func (chain *Chain) Execute(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, *http.Request, error) {
+	if chain.isRequestIgnoredPattern(req) {
+		return ctx, rw, req, nil
+	}
 	var err error
 	for _, middleware := range chain.MiddlewareList {
 		ctx, rw, err = middleware(ctx, rw, req)
@@ -78,6 +91,32 @@ func (chain *Chain) Execute(ctx context.Context, rw http.ResponseWriter, req *ht
 		}
 	}
 	return ctx, rw, req, nil
+}
+
+func (chain *Chain) isRequestIgnoredPattern(req *http.Request) bool {
+	if chain.IgnorePatterns == nil {
+		return false
+	}
+	path := req.URL.Path
+	for _, pattern := range chain.IgnorePatterns {
+		if pattern.MatchString(path) {
+			return true
+		}
+	}
+	return false
+}
+
+// AddIgnorePattern adds an ignore pattern to this security chain.
+// The pattern is compiled to a regular expression and must be valid
+// regular expression. If the pattern is not valid, an error will be
+// returned and the pattern is not added to the list of ignore patterns.
+func (chain *Chain) AddIgnorePattern(pattern string) error {
+	reg, err := regexp.Compile(pattern)
+	if err != nil {
+		return err
+	}
+	chain.IgnorePatterns = append(chain.IgnorePatterns, reg)
+	return nil
 }
 
 // SecurityMiddlewareBuilders is a map that maps a security type to a specific MiddlewareBuilder.
