@@ -96,6 +96,7 @@ type User struct {
 	Roles         []string `json:"roles, omitempty"`
 	Organizations []string `json:"organizations, omitempty"`
 	ExternalID    string   `json:"externalId, omitempty"`
+	Active        bool     `json:"active, omitempty"`
 }
 
 // UserService defines an interface for verification of the user credentials.
