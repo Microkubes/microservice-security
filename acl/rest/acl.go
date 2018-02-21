@@ -80,7 +80,11 @@ func (c *ACLController) CreatePolicy(ctx *app.CreatePolicyAclContext) error {
 	if ctx.Payload.ID != nil && *ctx.Payload.ID != "" {
 		id = *ctx.Payload.ID
 	} else {
-		id = uuid.NewV4().String()
+		randUUID, err := uuid.NewV4()
+		if err != nil {
+			return err
+		}
+		id = randUUID.String()
 	}
 
 	if ctx.Payload.Actions == nil || len(ctx.Payload.Actions) == 0 {
@@ -234,8 +238,13 @@ func (c *ACLController) ManageAccess(ctx *app.ManageAccessAclContext) error {
 		effect = "allow"
 	}
 
+	randUUID, err := uuid.NewV4()
+	if err != nil {
+		return err
+	}
+
 	aclPolicy := &ladon.DefaultPolicy{
-		ID:          uuid.NewV4().String(),
+		ID:          randUUID.String(),
 		Description: description,
 		Effect:      effect,
 		Subjects:    aaPolicy.Users,
@@ -260,7 +269,7 @@ func (c *ACLController) ManageAccess(ctx *app.ManageAccessAclContext) error {
 		aclPolicy.Conditions["roles"] = rolesCond
 	}
 
-	err := c.Manager.Create(aclPolicy)
+	err = c.Manager.Create(aclPolicy)
 	if err != nil {
 		return ctx.InternalServerError(err)
 	}

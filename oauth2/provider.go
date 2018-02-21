@@ -261,7 +261,11 @@ func (provider *AuthProvider) generateAccessToken(userData map[string]interface{
 		return "", err
 	}
 	// Remap JWT standard claims
-	userData["jti"] = uuid.NewV4().String()
+	randUUID, err := uuid.NewV4()
+	if err != nil {
+		return "", err
+	}
+	userData["jti"] = randUUID.String()
 	userData["iss"] = provider.ProviderName
 	userData["exp"] = time.Now().Add(time.Duration(provider.AccessTokenValidityPeriod) * time.Millisecond).Unix()
 	userData["iat"] = time.Now().Unix()

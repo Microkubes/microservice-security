@@ -38,7 +38,11 @@ func TestCreatePolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	id := uuid.NewV4().String()
+	randUUID, err := uuid.NewV4()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := randUUID.String()
 
 	if cleanup != nil {
 		defer func() {
@@ -113,7 +117,11 @@ func TestCreatePolicyWithConditions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	id := uuid.NewV4().String()
+	randUUID, err := uuid.NewV4()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := randUUID.String()
 
 	if cleanup != nil {
 		defer func() {
@@ -177,7 +185,11 @@ func TestGetPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	id := uuid.NewV4().String()
+	randUUID, err := uuid.NewV4()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := randUUID.String()
 
 	if cleanup != nil {
 		defer func() {
@@ -262,7 +274,13 @@ func TestFindRequestsCandidates(t *testing.T) {
 
 	ids := []string{}
 	for i := 0; i < 4; i++ {
-		ids = append(ids, uuid.NewV4().String())
+
+		randUUID, err := uuid.NewV4()
+		if err != nil {
+			t.Fatal(err)
+		}
+		id := randUUID.String()
+		ids = append(ids, id)
 	}
 
 	if cleanup != nil {

@@ -138,7 +138,11 @@ func (m *MongoDBLadonManager) CreateWithAuth(policy ladon.Policy, authObj *auth.
 	}
 	record.CreatedAt = time.Now().Unix()
 	if record.ID == "" {
-		record.ID = uuid.NewV4().String()
+		randUUID, err := uuid.NewV4()
+		if err != nil {
+			return err
+		}
+		record.ID = randUUID.String()
 	}
 
 	record.CreatedBy = authObj.UserID

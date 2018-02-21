@@ -114,7 +114,12 @@ func TestCreatePolicyAclCreated(t *testing.T) {
 	}
 
 	description := ""
-	id := uuid.NewV4().String()
+
+	randUUID, err := uuid.NewV4()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := randUUID.String()
 	payload := &app.ACLPolicyPayload{
 		Actions:     []string{"api:read"},
 		Description: &description,
@@ -155,7 +160,12 @@ func TestCreatePolicyAclInternalServerError(t *testing.T) {
 	}
 
 	description := ""
-	id := uuid.NewV4().String()
+
+	randUUID, err := uuid.NewV4()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := randUUID.String()
 	payload := &app.ACLPolicyPayload{
 		Actions:     []string{"api:read"},
 		Description: &description,
@@ -479,7 +489,12 @@ func TestUpdatePolicyAclBadRequest(t *testing.T) {
 	}
 
 	description := ""
-	id := uuid.NewV4().String()
+
+	randUUID, err := uuid.NewV4()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := randUUID.String()
 	payload := &app.ACLPolicyPayload{
 		Actions:     []string{"api:read"},
 		Description: &description,
@@ -517,7 +532,12 @@ func TestUpdatePolicyAclInternalServerError(t *testing.T) {
 	}
 
 	description := ""
-	id := uuid.NewV4().String()
+
+	randUUID, err := uuid.NewV4()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := randUUID.String()
 	payload := &app.ACLPolicyPayload{
 		Actions:     []string{"api:read"},
 		Description: &description,
@@ -548,7 +568,12 @@ func TestUpdatePolicyAclNotFound(t *testing.T) {
 	}
 
 	description := ""
-	id := uuid.NewV4().String()
+
+	randUUID, err := uuid.NewV4()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := randUUID.String()
 	payload := &app.ACLPolicyPayload{
 		Actions:     []string{"api:read"},
 		Description: &description,
@@ -588,7 +613,12 @@ func TestUpdatePolicyAclOK(t *testing.T) {
 	}
 
 	description := ""
-	id := uuid.NewV4().String()
+
+	randUUID, err := uuid.NewV4()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := randUUID.String()
 	payload := &app.ACLPolicyPayload{
 		Actions:     []string{"api:read"},
 		Description: &description,
