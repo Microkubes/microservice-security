@@ -110,6 +110,7 @@ func NewOAuth2SecurityMiddleware(resolver goaJwt.KeyResolver, scheme *goa.OAuth2
 
 			roles := []string{}
 			organizations := []string{}
+			namespaces := []string{}
 			var username string
 			var userID string
 
@@ -125,12 +126,16 @@ func NewOAuth2SecurityMiddleware(resolver goaJwt.KeyResolver, scheme *goa.OAuth2
 			if organizationsStr, ok := claims["organizations"]; ok {
 				organizations = strings.Split(organizationsStr.(string), ",")
 			}
+			if namespacesStr, ok := claims["namespaces"]; ok {
+				namespaces = strings.Split(namespacesStr.(string), ",")
+			}
 
 			authObj := &auth.Auth{
 				Roles:         roles,
 				Organizations: organizations,
 				Username:      username,
 				UserID:        userID,
+				Namespaces:    namespaces,
 			}
 
 			return h(auth.SetAuth(ctx, authObj), rw, req)

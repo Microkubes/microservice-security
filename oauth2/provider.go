@@ -228,6 +228,12 @@ func (provider *AuthProvider) Exchange(clientID, code, redirectURI string) (refr
 		}
 	}
 
+	if namespaces, ok := userData["namespaces"]; ok && namespaces != nil {
+		if nsArr, ok := namespaces.([]interface{}); ok {
+			userData["namespaces"] = strings.Join(toArr(nsArr), ",")
+		}
+	}
+
 	oauth2Token, err := provider.generateOAuthToken(clientID, clientAuth.Scope, userData)
 	if err != nil {
 		return "", "", 0, InternalServerError("Failed to generate access token and refresh token", err)

@@ -14,9 +14,12 @@ type Auth struct {
 	// Roles is the list of roles that the user has claimed and have been authorized by the system.
 	Roles []string `json:"roles,omitempty"`
 
-	// Organizations is the list of ogranizations that the user belongs to. This is a list of
+	// Organizations is the list of organizations that the user belongs to. This is a list of
 	// authorized ogranization based on the security claim.
 	Organizations []string `json:"organizations,omitempty"`
+
+	// Namespaces is the list of namespaces that this user belongs to.
+	Namespaces []string `json:"namespaces"`
 }
 
 // SecurityErrors holds the errors generated during validation of the request with a
