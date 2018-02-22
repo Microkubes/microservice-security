@@ -95,6 +95,7 @@ type User struct {
 	Email         string   `json:"email, omitempty"`
 	Roles         []string `json:"roles, omitempty"`
 	Organizations []string `json:"organizations, omitempty"`
+	Namespaces    []string `json:"namespaces, omitempty"`
 	ExternalID    string   `json:"externalId, omitempty"`
 	Active        bool     `json:"active, omitempty"`
 }
