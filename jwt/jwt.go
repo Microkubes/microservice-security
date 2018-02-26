@@ -54,6 +54,7 @@ func NewJWTSecurityMiddleware(resolver goajwt.KeyResolver, scheme *goa.JWTSecuri
 			fmt.Println("Username and userID OK")
 			roles := []string{}
 			organizations := []string{}
+			namespaces := []string{}
 			var username string
 			var userID string
 
@@ -70,12 +71,16 @@ func NewJWTSecurityMiddleware(resolver goajwt.KeyResolver, scheme *goa.JWTSecuri
 			if organizationsStr, ok := claims["organizations"]; ok {
 				organizations = strings.Split(organizationsStr.(string), ",")
 			}
+			if namespacesStr, ok := claims["namespaces"]; ok {
+				namespaces = strings.Split(namespacesStr.(string), ",")
+			}
 
 			authObj := &auth.Auth{
 				Roles:         roles,
 				Organizations: organizations,
 				Username:      username,
 				UserID:        userID,
+				Namespaces:    namespaces,
 			}
 			fmt.Printf("Auth created: %v\n", authObj)
 			return handler(auth.SetAuth(ctx, authObj), rw, req)
