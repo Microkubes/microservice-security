@@ -152,6 +152,22 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware, samlConfig *conf
 				for _, v := range user["roles"].([]interface{}) {
 					attributes["roles"] = append(attributes["roles"], v.(string))
 				}
+				attributes["organizations"] = []string{}
+				if organizations, ok := user["organizations"]; ok {
+					if organizationsArr, ok := organizations.([]interface{}); ok {
+						for _, org := range organizationsArr {
+							attributes["organizations"] = append(attributes["organizations"], org.(string))
+						}
+					}
+				}
+				attributes["namespaces"] = []string{}
+				if namespaces, ok := user["namespaces"]; ok {
+					if namespacesArr, ok := namespaces.([]interface{}); ok {
+						for _, ns := range namespacesArr {
+							attributes["namespaces"] = append(attributes["namespaces"], ns.(string))
+						}
+					}
+				}
 			} else {
 				// User came from custom IdP.
 				if _, ok := attributes["eduPersonPrincipalName"]; !ok {
@@ -173,9 +189,18 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware, samlConfig *conf
 				}
 			}
 
+			namespaces, ok := attributes["namespaces"]
+			if !ok {
+				namespaces = []string{}
+			}
+			organizations, ok := attributes["organizatios"]
+			if !ok {
+				organizations = []string{}
+			}
 			authObj := &auth.Auth{
 				Roles:         attributes["eduPersonAffiliation"],
-				Organizations: attributes["organizations"],
+				Organizations: organizations,
+				Namespaces:    namespaces,
 				Username:      email,
 				UserID:        userID,
 			}
