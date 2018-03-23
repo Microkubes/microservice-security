@@ -5,7 +5,7 @@ import (
 
 	"context"
 
-	"github.com/JormungandrK/microservice-security/auth"
+	"github.com/Microkubes/microservice-security/auth"
 	"github.com/goadesign/goa"
 )
 

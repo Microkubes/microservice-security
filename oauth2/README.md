@@ -79,8 +79,8 @@ middleware and add it to the security chain.
 ```go
 
 import (
-	"github.com/JormungandrK/microservice-security/oauth2"
-	"github.com/JormungandrK/microservice-security/chain"
+	"github.com/Microkubes/microservice-security/oauth2"
+	"github.com/Microkubes/microservice-security/chain"
 )
 
 func main() {

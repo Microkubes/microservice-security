@@ -6,7 +6,7 @@ import (
 
 	"context"
 
-	"github.com/JormungandrK/microservice-security/auth"
+	"github.com/Microkubes/microservice-security/auth"
 	"github.com/ory/ladon"
 
 	manager "github.com/ory/ladon/manager/memory"

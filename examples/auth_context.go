@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/JormungandrK/microservice-security/auth"
+	"github.com/Microkubes/microservice-security/auth"
 )
 
 // SetAuthInContext sets an auth.Auth object in context and checks for it

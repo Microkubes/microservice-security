@@ -17,9 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JormungandrK/microservice-security/auth"
-	"github.com/JormungandrK/microservice-security/chain"
-	"github.com/JormungandrK/microservice-tools/config"
+	"github.com/Microkubes/microservice-security/auth"
+	"github.com/Microkubes/microservice-security/chain"
+	"github.com/Microkubes/microservice-tools/config"
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/crewjam/saml"
 	"github.com/crewjam/saml/samlsp"

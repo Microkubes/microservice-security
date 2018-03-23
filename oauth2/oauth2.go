@@ -8,9 +8,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/JormungandrK/microservice-security/auth"
-	"github.com/JormungandrK/microservice-security/chain"
-	jormungandrJwt "github.com/JormungandrK/microservice-security/jwt"
+	"github.com/Microkubes/microservice-security/auth"
+	"github.com/Microkubes/microservice-security/chain"
+	jormungandrJwt "github.com/Microkubes/microservice-security/jwt"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/goadesign/goa"
 	goaJwt "github.com/goadesign/goa/middleware/security/jwt"

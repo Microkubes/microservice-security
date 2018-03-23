@@ -9,8 +9,8 @@ import (
 
 	"context"
 
-	"github.com/JormungandrK/microservice-security/auth"
-	"github.com/JormungandrK/microservice-security/chain"
+	"github.com/Microkubes/microservice-security/auth"
+	"github.com/Microkubes/microservice-security/chain"
 	"github.com/dgrijalva/jwt-go"
 	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/goadesign/goa"

@@ -30,5 +30,5 @@ for repo in "${repos[@]}"; do
 		-H "Travis-API-Version: 3" \
 		-H "Authorization: token $token" \
 		-d "$body" \
-		"https://api.travis-ci.com/repo/JormungandrK%2F${repo}/requests"
+		"https://api.travis-ci.com/repo/Microkubes%2F${repo}/requests"
 done

@@ -112,8 +112,8 @@ middleware and add it to the security chain.
 ```go
 
 import (
-	"github.com/JormungandrK/microservice-security/saml"
-	"github.com/JormungandrK/microservice-security/chain"
+	"github.com/Microkubes/microservice-security/saml"
+	"github.com/Microkubes/microservice-security/chain"
 )
 
 func main() {

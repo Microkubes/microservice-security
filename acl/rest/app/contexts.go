@@ -4,8 +4,8 @@
 //
 // Command:
 // $ goagen
-// --design=github.com/JormungandrK/microservice-security/acl/rest
-// --out=$(GOPATH)/src/github.com/JormungandrK/microservice-security/acl/rest
+// --design=github.com/Microkubes/microservice-security/acl/rest
+// --out=$(GOPATH)/src/github.com/Microkubes/microservice-security/acl/rest
 // --version=v1.2.0-dirty
 
 package app

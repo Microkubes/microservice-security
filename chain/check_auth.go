@@ -3,7 +3,7 @@ package chain
 import (
 	"net/http"
 
-	"github.com/JormungandrK/microservice-security/auth"
+	"github.com/Microkubes/microservice-security/auth"
 	"github.com/goadesign/goa"
 
 	"context"

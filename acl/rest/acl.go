@@ -3,8 +3,8 @@ package rest
 import (
 	"fmt"
 
-	"github.com/JormungandrK/microservice-security/acl"
-	"github.com/JormungandrK/microservice-security/acl/rest/app"
+	"github.com/Microkubes/microservice-security/acl"
+	"github.com/Microkubes/microservice-security/acl/rest/app"
 	"github.com/goadesign/goa"
 	"github.com/ory/ladon"
 	uuid "github.com/satori/go.uuid"

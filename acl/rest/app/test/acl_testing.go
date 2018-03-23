@@ -4,8 +4,8 @@
 //
 // Command:
 // $ goagen
-// --design=github.com/JormungandrK/microservice-security/acl/rest
-// --out=$(GOPATH)/src/github.com/JormungandrK/microservice-security/acl/rest
+// --design=github.com/Microkubes/microservice-security/acl/rest
+// --out=$(GOPATH)/src/github.com/Microkubes/microservice-security/acl/rest
 // --version=v1.2.0-dirty
 
 package test
@@ -20,7 +20,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 
-	"github.com/JormungandrK/microservice-security/acl/rest/app"
+	"github.com/Microkubes/microservice-security/acl/rest/app"
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/goatest"
 )

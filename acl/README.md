@@ -57,9 +57,9 @@ microservice setup add:
 import (
   // other imports
 
-  "github.com/JormungandrK/microservice-security/acl"
-  "github.com/JormungandrK/microservice-security/acl/rest"
-  restApp "github.com/JormungandrK/microservice-security/acl/rest/app"
+  "github.com/Microkubes/microservice-security/acl"
+  "github.com/Microkubes/microservice-security/acl/rest"
+  restApp "github.com/Microkubes/microservice-security/acl/rest/app"
 )
 
 func main(){
