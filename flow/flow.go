@@ -133,6 +133,7 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 		cfg.SecurityConfig.SAMLConfig == nil {
 		// No security defined
 		return securityChain, cleanup, nil
+
 	}
 
 	securityChain.AddMiddleware(chain.CheckAuth)

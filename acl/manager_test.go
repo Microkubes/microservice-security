@@ -13,10 +13,13 @@ import (
 )
 
 var dbConfig = &config.DBConfig{
-	DatabaseName: "users",
-	Host:         "172.17.0.1:27017",
-	Username:     "restapi",
-	Password:     "restapi",
+	DBName: "mongodb",
+	DBInfo: config.DBInfo{
+		DatabaseName: "users",
+		Host:         "172.17.0.1:27017",
+		Username:     "restapi",
+		Password:     "restapi",
+	},
 }
 
 func TestCompileRegex(t *testing.T) {
