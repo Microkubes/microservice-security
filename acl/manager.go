@@ -269,6 +269,7 @@ func (m *MongoDBLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Pol
 	return toLadonPolicies(results)
 }
 
+// FindPoliciesForSubject retrieves all ladon.Policy candidates that can handle a request for a given subject.
 func (m *MongoDBLadonManager) FindPoliciesForSubject(subject string) (ladon.Policies, error) {
 	results := []MongoPolicyRecord{}
 
@@ -283,6 +284,7 @@ func (m *MongoDBLadonManager) FindPoliciesForSubject(subject string) (ladon.Poli
 	return toLadonPolicies(results)
 }
 
+// FindPoliciesForResource retrieves all ladon.Policy candidates that can handle a request for a given resource.
 func (m *MongoDBLadonManager) FindPoliciesForResource(resource string) (ladon.Policies, error) {
 	results := []MongoPolicyRecord{}
 
