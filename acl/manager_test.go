@@ -13,10 +13,13 @@ import (
 )
 
 var dbConfig = &config.DBConfig{
-	DatabaseName: "users",
-	Host:         "172.17.0.1:27017",
-	Username:     "restapi",
-	Password:     "restapi",
+	DBName: "mongodb",
+	DBInfo: config.DBInfo{
+		DatabaseName: "testdb",
+		Host:         "172.17.0.1:27017",
+		Username:     "restapi",
+		Password:     "restapi",
+	},
 }
 
 func TestCompileRegex(t *testing.T) {
@@ -400,4 +403,249 @@ func TestFindRequestsCandidates(t *testing.T) {
 		t.Fatal("Expected to fetch the last policy")
 	}
 
+}
+
+func TestFindPoliciesForSubject(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping in short mode")
+	}
+
+	manager, cleanup, err := NewMongoDBLadonManager(dbConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ids := []string{}
+	for i := 0; i < 4; i++ {
+
+		randUUID, err := uuid.NewV4()
+		if err != nil {
+			t.Fatal(err)
+		}
+		id := randUUID.String()
+		ids = append(ids, id)
+	}
+
+	if cleanup != nil {
+		defer func() {
+			for _, id := range ids {
+				manager.Collection.Remove(bson.M{"id": id})
+			}
+			cleanup()
+		}()
+	}
+
+	authObj := auth.Auth{
+		Organizations: []string{"org1", "org2"},
+		Roles:         []string{"user"},
+		UserID:        "id-1",
+		Username:      "username",
+	}
+
+	err = manager.CreateWithAuth(&ladon.DefaultPolicy{
+		Actions:     []string{"api:read", "api:write"},
+		Description: "RequestCandidate",
+		Effect:      ladon.AllowAccess,
+		ID:          ids[0],
+		Resources:   []string{"/user/<.+>", "/admin"},
+		Subjects:    []string{"user1", "user2"},
+	}, &authObj)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = manager.CreateWithAuth(&ladon.DefaultPolicy{
+		Actions:     []string{"api:read"},
+		Description: "RequestCandidate",
+		Effect:      ladon.AllowAccess,
+		ID:          ids[1],
+		Resources:   []string{"/user/<.+>", "/allowed"},
+		Subjects:    []string{"user1", "user3"},
+	}, &authObj)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = manager.CreateWithAuth(&ladon.DefaultPolicy{
+		Actions:     []string{"api:read"},
+		Description: "RequestCandidate",
+		Effect:      ladon.AllowAccess,
+		ID:          ids[2],
+		Resources:   []string{"/user/<.+>", "/admin/<.+>/read"},
+		Subjects:    []string{"user1", "user4", "user5"},
+	}, &authObj)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = manager.CreateWithAuth(&ladon.DefaultPolicy{
+		Actions:     []string{"api:read", "api:write"},
+		Description: "RequestCandidate",
+		Effect:      ladon.AllowAccess,
+		ID:          ids[3],
+		Resources:   []string{"/user/<.+>", "/admin/<.+>/write"},
+		Subjects:    []string{"user1", "user4", "user<.+>"},
+	}, &authObj)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	policies, err := manager.FindPoliciesForSubject("user1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if policies == nil {
+		t.Fatal("Expected to get policies result, but got nil instead")
+	}
+
+	if len(policies) != 4 {
+		t.Fatalf("Expected to get 4 policies, but got %d instead\n", len(policies))
+	}
+
+	policies, err = manager.FindPoliciesForSubject("user2")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if policies == nil {
+		t.Fatal("Expected to get policies result, but got nil instead")
+	}
+
+	if len(policies) != 2 {
+		t.Fatalf("Expected to get 2 policy candidates, but got %d instead\n", len(policies))
+	}
+}
+
+func TestFindPoliciesForResource(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping in short mode")
+	}
+
+	manager, cleanup, err := NewMongoDBLadonManager(dbConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ids := []string{}
+	for i := 0; i < 4; i++ {
+
+		randUUID, err := uuid.NewV4()
+		if err != nil {
+			t.Fatal(err)
+		}
+		id := randUUID.String()
+		ids = append(ids, id)
+	}
+
+	if cleanup != nil {
+		defer func() {
+			for _, id := range ids {
+				manager.Collection.Remove(bson.M{"id": id})
+			}
+			cleanup()
+		}()
+	}
+
+	authObj := auth.Auth{
+		Organizations: []string{"org1", "org2"},
+		Roles:         []string{"user"},
+		UserID:        "id-1",
+		Username:      "username",
+	}
+
+	err = manager.CreateWithAuth(&ladon.DefaultPolicy{
+		Actions:     []string{"api:read", "api:write"},
+		Description: "RequestCandidate",
+		Effect:      ladon.AllowAccess,
+		ID:          ids[0],
+		Resources:   []string{"/user/<.+>", "/admin"},
+		Subjects:    []string{"user1", "user2"},
+	}, &authObj)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = manager.CreateWithAuth(&ladon.DefaultPolicy{
+		Actions:     []string{"api:read"},
+		Description: "RequestCandidate",
+		Effect:      ladon.AllowAccess,
+		ID:          ids[1],
+		Resources:   []string{"/user/<.+>", "/allowed"},
+		Subjects:    []string{"user1", "user3"},
+	}, &authObj)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = manager.CreateWithAuth(&ladon.DefaultPolicy{
+		Actions:     []string{"api:read"},
+		Description: "RequestCandidate",
+		Effect:      ladon.AllowAccess,
+		ID:          ids[2],
+		Resources:   []string{"/user/<.+>", "/admin/<.+>/read"},
+		Subjects:    []string{"user1", "user4", "user5"},
+	}, &authObj)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = manager.CreateWithAuth(&ladon.DefaultPolicy{
+		Actions:     []string{"api:read", "api:write"},
+		Description: "RequestCandidate",
+		Effect:      ladon.AllowAccess,
+		ID:          ids[3],
+		Resources:   []string{"/user/<.+>", "/admin/<.+>/write"},
+		Subjects:    []string{"user1", "user4", "user<.+>"},
+	}, &authObj)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	policies, err := manager.FindPoliciesForResource("/user/user-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if policies == nil {
+		t.Fatal("Expected to get policies result, but got nil instead")
+	}
+
+	if len(policies) != 4 {
+		t.Fatalf("Expected to get 4 policies, but got %d instead\n", len(policies))
+	}
+
+	policies, err = manager.FindPoliciesForResource("/admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if policies == nil {
+		t.Fatal("Expected to get policies result, but got nil instead")
+	}
+
+	if len(policies) != 1 {
+		t.Fatalf("Expected to get 1 policy candidate, but got %d instead\n", len(policies))
+	}
+
+	policies, err = manager.FindPoliciesForResource("/admin/sysadmin/write")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if policies == nil {
+		t.Fatal("Expected to get policies result, but got nil instead")
+	}
+
+	if len(policies) != 1 {
+		t.Fatalf("Expected to get 1 policy candidate, but got %d instead\n", len(policies))
+	}
 }

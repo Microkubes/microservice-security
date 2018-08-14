@@ -122,6 +122,20 @@ func toLadonPolicy(mpr *MongoPolicyRecord) (ladon.Policy, error) {
 	return &defPolicy, nil
 }
 
+func toLadonPolicies(policyRecords []MongoPolicyRecord) (ladon.Policies, error) {
+	policies := []ladon.Policy{}
+
+	for _, record := range policyRecords {
+		policy, err := toLadonPolicy(&record)
+		if err != nil {
+			return nil, err
+		}
+		policies = append(policies, policy)
+	}
+	// return all policies back
+	return policies, nil
+}
+
 // Create persists the policy.
 func (m *MongoDBLadonManager) Create(policy ladon.Policy) error {
 	return fmt.Errorf("use MongoDBLadonManager.CreateWithAuth instead")
@@ -252,17 +266,37 @@ func (m *MongoDBLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Pol
 		return nil, err
 	}
 
-	policies := []ladon.Policy{}
+	return toLadonPolicies(results)
+}
 
-	for _, record := range results {
-		policy, err := toLadonPolicy(&record)
-		if err != nil {
-			return nil, err
-		}
-		policies = append(policies, policy)
+// FindPoliciesForSubject retrieves all ladon.Policy candidates that can handle a request for a given subject.
+func (m *MongoDBLadonManager) FindPoliciesForSubject(subject string) (ladon.Policies, error) {
+	results := []MongoPolicyRecord{}
+
+	err := m.Collection.Find(bson.M{
+		"$where": fmt.Sprintf("this.compiledSubjects.filter(function(sub){ return RegExp(sub).test('%s'); }).length > 0", subject),
+	}).All(&results)
+
+	if err != nil {
+		return nil, err
 	}
-	// return all results back
-	return policies, nil
+
+	return toLadonPolicies(results)
+}
+
+// FindPoliciesForResource retrieves all ladon.Policy candidates that can handle a request for a given resource.
+func (m *MongoDBLadonManager) FindPoliciesForResource(resource string) (ladon.Policies, error) {
+	results := []MongoPolicyRecord{}
+
+	err := m.Collection.Find(bson.M{
+		"$where": fmt.Sprintf("this.compiledResources.filter(function(rc){ return RegExp(rc).test('%s'); }).length > 0", resource),
+	}).All(&results)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return toLadonPolicies(results)
 }
 
 // NewMongoDBLadonManager builds a MongoDBLadonManager for the given database configuration.

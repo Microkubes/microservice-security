@@ -75,6 +75,14 @@ func (d *DummyLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Polic
 	return nil, nil
 }
 
+func (d *DummyLadonManager) FindPoliciesForSubject(subject string) (ladon.Policies, error) {
+	return nil, nil
+}
+
+func (d *DummyLadonManager) FindPoliciesForResource(resource string) (ladon.Policies, error) {
+	return nil, nil
+}
+
 func contains(array []string, value string) bool {
 	for _, v := range array {
 		if v == value {
@@ -96,7 +104,7 @@ func TestCreatePolicyAclBadRequest(t *testing.T) {
 	}
 
 	payload := &app.ACLPolicyPayload{
-	// missing all values must create bad request
+		// missing all values must create bad request
 	}
 
 	test.CreatePolicyAclBadRequest(t, context.Background(), service, aclController, payload)
