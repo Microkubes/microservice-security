@@ -358,7 +358,49 @@ func (m *BackendLadonManager) getACLRepository() db.ACLRepository {
 }
 
 // NewBackendLadonManager builds a BackendLadonManager for the given database configuration.
-func NewBackendLadonManager(config *config.DBConfig) (*BackendLadonManager, func(), error) {
+func NewBackendLadonManager(cfg *config.DBConfig) (*BackendLadonManager, func(), error) {
+	manager := backends.NewBackendSupport(map[string]*config.DBInfo{
+		cfg.DBName: &cfg.DBInfo,
+	})
+	manager = db.WrapBackendManager(manager, map[string]db.RepoExtender{
+		"mongodb":  db.ACLSecurityMongoRepoExtender,
+		"dynamodb": db.ACLSecurityDynamoRepoExtender,
+	})
+
+	noop := func() {}
+
+	// let's define the repositories
+
+	backend, err := manager.GetBackend(cfg.DBName)
+	if err != nil {
+		return nil, noop, err
+	}
+
+	if _, err = backend.DefineRepository("ACL", backends.RepositoryDefinitionMap{
+		"name":           "ACL",
+		"enableTtl":      false,
+		"hashKey":        "id",
+		"rangeKey":       "createdAt",
+		"readCapacity":   50,
+		"writeCapacipty": 50,
+		"indexes": []backends.Index{
+			backends.NewUniqueIndex("id"),
+			backends.NewNonUniqueIndex("createdAt"),
+		},
+	}); err != nil {
+		return nil, noop, err
+	}
+
+	return &BackendLadonManager{
+		backendManager: manager,
+		backendTypeProvider: func() string {
+			return cfg.DBName
+		},
+	}, noop, nil
+}
+
+// NewBackendLadonManager builds a BackendLadonManager for the given database configuration.
+func NewBackendLadonManager_old(config *config.DBConfig) (*BackendLadonManager, func(), error) {
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs:    []string{config.Host},
 		Username: config.Username,

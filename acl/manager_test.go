@@ -16,7 +16,7 @@ import (
 var dbConfig = &config.DBConfig{
 	DBName: "mongodb",
 	DBInfo: config.DBInfo{
-		DatabaseName: "users",
+		DatabaseName: "testdb",
 		Host:         "localhost:27017",
 		Username:     "restapi",
 		Password:     "restapi",
