@@ -1,15 +1,31 @@
 package db
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/JormungandrK/backends"
 	"gopkg.in/mgo.v2/bson"
 )
 
+var compiledQueries = map[string]func(val string) string{
+	"action": func(val string) string {
+		return reverseRegexpMatch("compiledActions", val)
+	},
+	"subject": func(val string) string {
+		return reverseRegexpMatch("compiledSubjects", val)
+	},
+	"resource": func(val string) string {
+		return reverseRegexpMatch("compiledResources", val)
+	},
+}
+
+func reverseRegexpMatch(property, value string) string {
+	return fmt.Sprintf("this.%s.filter(function(rc){ return RegExp(rc).test('%s'); }).length > 0", property, value)
+}
+
 type ACLSecurityMongoRepo struct {
 	*backends.MongoCollection
-	compiledQueries map[string]func(val string) string
 }
 
 func (a *ACLSecurityMongoRepo) FindPolicies(filter map[string]string) ([]*PolicyRecord, error) {
@@ -21,7 +37,7 @@ func (a *ACLSecurityMongoRepo) FindPolicies(filter map[string]string) ([]*Policy
 		mongoFilter = nil
 	} else if len(filter) == 1 {
 		for prop, value := range filter {
-			query, ok := a.compiledQueries[prop]
+			query, ok := compiledQueries[prop]
 			if !ok {
 				return nil, backends.ErrInvalidInput("find policies by '%s' not supported", prop)
 			}
@@ -33,7 +49,7 @@ func (a *ACLSecurityMongoRepo) FindPolicies(filter map[string]string) ([]*Policy
 	} else {
 		filters := []bson.M{}
 		for prop, value := range filter {
-			query, ok := a.compiledQueries[prop]
+			query, ok := compiledQueries[prop]
 			if !ok {
 				return nil, backends.ErrInvalidInput("find policies by '%s' not supported", prop)
 			}
