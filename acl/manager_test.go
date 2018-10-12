@@ -3,8 +3,9 @@ package acl
 import (
 	"testing"
 
-	"gopkg.in/mgo.v2/bson"
+	"github.com/JormungandrK/backends"
 
+	"github.com/Microkubes/microservice-security/acl/db"
 	"github.com/Microkubes/microservice-security/auth"
 	"github.com/Microkubes/microservice-tools/config"
 	"github.com/ory/ladon"
@@ -36,7 +37,7 @@ func TestCreatePolicy(t *testing.T) {
 		t.Skip("Skipping in short mode")
 	}
 
-	manager, cleanup, err := NewMongoDBLadonManager(dbConfig)
+	manager, cleanup, err := NewBackendLadonManager(dbConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +50,8 @@ func TestCreatePolicy(t *testing.T) {
 
 	if cleanup != nil {
 		defer func() {
-			manager.Collection.Remove(bson.M{"id": id})
+			//manager.Collection.Remove(bson.M{"id": id})
+			manager.getRepository().DeleteAll(backends.NewFilter().Match("id", id))
 			cleanup()
 		}()
 	}
@@ -74,14 +76,9 @@ func TestCreatePolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	coll := manager.Collection
+	resultPolicy := db.PolicyRecord{}
 
-	resultPolicy := MongoPolicyRecord{}
-
-	err = coll.Find(bson.M{
-		"id": id,
-	}).One(&resultPolicy)
-	if err != nil {
+	if _, err = manager.getRepository().GetOne(backends.NewFilter().Match("id", id), &resultPolicy); err != nil {
 		t.Fatal(err)
 	}
 
@@ -115,7 +112,7 @@ func TestCreatePolicyWithConditions(t *testing.T) {
 		t.Skip("Skipping in short mode")
 	}
 
-	manager, cleanup, err := NewMongoDBLadonManager(dbConfig)
+	manager, cleanup, err := NewBackendLadonManager(dbConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +125,7 @@ func TestCreatePolicyWithConditions(t *testing.T) {
 
 	if cleanup != nil {
 		defer func() {
-			manager.Collection.Remove(bson.M{"id": id})
+			manager.getRepository().DeleteAll(backends.NewFilter().Match("id", id))
 			cleanup()
 		}()
 	}
@@ -166,10 +163,9 @@ func TestCreatePolicyWithConditions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record := MongoPolicyRecord{}
+	record := db.PolicyRecord{}
 
-	err = manager.Collection.Find(bson.M{"id": id}).One(&record)
-	if err != nil {
+	if _, err := manager.getRepository().GetOne(backends.NewFilter().Match("id", id), &record); err != nil {
 		t.Fatal(err)
 	}
 	if record.Conditions == "" {
@@ -183,7 +179,7 @@ func TestGetPolicy(t *testing.T) {
 		t.Skip("Skipping in short mode")
 	}
 
-	manager, cleanup, err := NewMongoDBLadonManager(dbConfig)
+	manager, cleanup, err := NewBackendLadonManager(dbConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +192,8 @@ func TestGetPolicy(t *testing.T) {
 
 	if cleanup != nil {
 		defer func() {
-			manager.Collection.Remove(bson.M{"id": id})
+			//manager.Collection.Remove(bson.M{"id": id})
+			manager.getRepository().DeleteAll(backends.NewFilter().Match("id", id))
 			cleanup()
 		}()
 	}
@@ -270,7 +267,7 @@ func TestFindRequestsCandidates(t *testing.T) {
 		t.Skip("Skipping in short mode")
 	}
 
-	manager, cleanup, err := NewMongoDBLadonManager(dbConfig)
+	manager, cleanup, err := NewBackendLadonManager(dbConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +286,8 @@ func TestFindRequestsCandidates(t *testing.T) {
 	if cleanup != nil {
 		defer func() {
 			for _, id := range ids {
-				manager.Collection.Remove(bson.M{"id": id})
+				//manager.Collection.Remove(bson.M{"id": id})
+				manager.getRepository().DeleteAll(backends.NewFilter().Match("id", id))
 			}
 			cleanup()
 		}()
@@ -410,7 +408,7 @@ func TestFindPoliciesForSubject(t *testing.T) {
 		t.Skip("Skipping in short mode")
 	}
 
-	manager, cleanup, err := NewMongoDBLadonManager(dbConfig)
+	manager, cleanup, err := NewBackendLadonManager(dbConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -429,7 +427,8 @@ func TestFindPoliciesForSubject(t *testing.T) {
 	if cleanup != nil {
 		defer func() {
 			for _, id := range ids {
-				manager.Collection.Remove(bson.M{"id": id})
+				//manager.Collection.Remove(bson.M{"id": id})
+				manager.getRepository().DeleteAll(backends.NewFilter().Match("id", id))
 			}
 			cleanup()
 		}()
@@ -526,7 +525,7 @@ func TestFindPoliciesForResource(t *testing.T) {
 		t.Skip("Skipping in short mode")
 	}
 
-	manager, cleanup, err := NewMongoDBLadonManager(dbConfig)
+	manager, cleanup, err := NewBackendLadonManager(dbConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -545,7 +544,8 @@ func TestFindPoliciesForResource(t *testing.T) {
 	if cleanup != nil {
 		defer func() {
 			for _, id := range ids {
-				manager.Collection.Remove(bson.M{"id": id})
+				//manager.Collection.Remove(bson.M{"id": id})
+				manager.getRepository().DeleteAll(backends.NewFilter().Match("id", id))
 			}
 			cleanup()
 		}()

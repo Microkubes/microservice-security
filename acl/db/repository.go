@@ -6,5 +6,5 @@ import (
 
 type ACLRepository interface {
 	backends.Repository
-	GetPolicies()
+	FindPolicies(filter map[string]string) ([]*PolicyRecord, error)
 }

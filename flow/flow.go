@@ -139,7 +139,7 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 	securityChain.AddMiddleware(chain.CheckAuth)
 
 	if cfg.ACLConfig != nil && !cfg.ACLConfig.Disable {
-		manager, mc, err := acl.NewMongoDBLadonManager(&cfg.DBConfig)
+		manager, mc, err := acl.NewBackendLadonManager(&cfg.DBConfig)
 		if err != nil {
 			return nil, cleanup, err
 		}
@@ -192,7 +192,7 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 	return securityChain, cleanup, nil
 }
 
-func addOrUpdatePolicy(policy ladon.Policy, manager *acl.MongoDBLadonManager) error {
+func addOrUpdatePolicy(policy ladon.Policy, manager *acl.BackendLadonManager) error {
 	existing, err := manager.Get(policy.GetID())
 	if err != nil {
 		return err
