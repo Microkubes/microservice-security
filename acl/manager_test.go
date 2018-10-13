@@ -287,7 +287,7 @@ func TestFindRequestsCandidates(t *testing.T) {
 		for _, id := range ids {
 			//manager.Collection.Remove(bson.M{"id": id})
 			if e := manager.getRepository().DeleteAll(backends.NewFilter().Match("id", id)); e != nil {
-				t.Println("Failed to delete: ", id, " -> ", e.Error())
+				t.Log("Failed to delete: ", id, " -> ", e.Error())
 			}
 		}
 		if cleanup != nil {
