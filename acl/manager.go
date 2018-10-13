@@ -377,6 +377,7 @@ func NewBackendLadonManager(cfg *config.DBConfig) (*BackendLadonManager, func(),
 	}
 
 	if _, err = backend.DefineRepository("ACL", backends.RepositoryDefinitionMap{
+		"customId":       true, // we generate our own IDs
 		"name":           "ACL",
 		"enableTtl":      false,
 		"hashKey":        "id",

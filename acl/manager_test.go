@@ -283,15 +283,18 @@ func TestFindRequestsCandidates(t *testing.T) {
 		ids = append(ids, id)
 	}
 
-	if cleanup != nil {
-		defer func() {
-			for _, id := range ids {
-				//manager.Collection.Remove(bson.M{"id": id})
-				manager.getRepository().DeleteAll(backends.NewFilter().Match("id", id))
+	defer func() {
+		for _, id := range ids {
+			//manager.Collection.Remove(bson.M{"id": id})
+			if e := manager.getRepository().DeleteAll(backends.NewFilter().Match("id", id)); e != nil {
+				t.Println("Failed to delete: ", id, " -> ", e.Error())
 			}
+		}
+		if cleanup != nil {
 			cleanup()
-		}()
-	}
+		}
+
+	}()
 
 	authObj := auth.Auth{
 		Organizations: []string{"org1", "org2"},

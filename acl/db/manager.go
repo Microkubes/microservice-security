@@ -10,6 +10,7 @@ import (
 type ExtendedBackend struct {
 	backends.Backend
 	extendRepo func(repo backends.Repository) backends.Repository
+	extended   map[string]backends.Repository
 }
 
 type RepoExtender func(backends.Repository) backends.Repository
@@ -19,13 +20,25 @@ func (eb *ExtendedBackend) DefineRepository(name string, def backends.Repository
 	if err != nil {
 		return nil, err
 	}
-	return eb.extendRepo(repo), nil
+
+	extended := eb.extendRepo(repo)
+	eb.extended[name] = extended
+
+	return extended, nil
+}
+
+func (eb *ExtendedBackend) GetRepository(name string) (backends.Repository, error) {
+	if repo, ok := eb.extended[name]; ok {
+		return repo, nil
+	}
+	return nil, backends.ErrBackendError(fmt.Sprintf("repository '%s' not defined", name))
 }
 
 func extendBackend(backend backends.Backend, extendRepo RepoExtender) backends.Backend {
 	return &ExtendedBackend{
 		Backend:    backend,
 		extendRepo: extendRepo,
+		extended:   map[string]backends.Repository{},
 	}
 }
 
@@ -42,18 +55,19 @@ func (em *ExtendedBackendManager) GetBackend(backendType string) (backends.Backe
 		return nil, err
 	}
 	em.lock.Lock()
-	if _, ok := em.extended[backendType]; ok {
+	if extendBackend, ok := em.extended[backendType]; ok {
 		em.lock.Unlock()
-		return backend, nil
+		return extendBackend, nil
 	}
 	repoExtender, ok := em.repoExtenders[backendType]
 	if !ok {
+		em.lock.Unlock()
 		return nil, fmt.Errorf("cannot extend backed of type %s", backendType)
 	}
-	backend = extendBackend(backend, repoExtender)
-	em.extended[backendType] = backend
+	extendedBackend := extendBackend(backend, repoExtender)
+	em.extended[backendType] = extendedBackend
 	em.lock.Unlock()
-	return backend, nil
+	return extendedBackend, nil
 }
 
 func WrapBackendManager(manager backends.BackendManager, supportedBackends map[string]RepoExtender) *ExtendedBackendManager {
