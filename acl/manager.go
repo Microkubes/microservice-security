@@ -13,7 +13,6 @@ import (
 	"github.com/ory/ladon"
 	"github.com/ory/ladon/compiler"
 	uuid "github.com/satori/go.uuid"
-	mgo "gopkg.in/mgo.v2"
 )
 
 // BackendLadonManager holds the mongo collection for storing the ladon policies
@@ -141,24 +140,7 @@ func (m *BackendLadonManager) Update(policy ladon.Policy) error {
 	if err != nil {
 		return err
 	}
-	// found := map[string]interface{}{}
-	// err = m.Collection.Find(bson.M{
-	// 	"id": policy.GetID(),
-	// }).One(found)
-	// if err != nil {
-	// 	return err
-	// }
-	// if _, ok := found["id"]; !ok {
-	// 	return fmt.Errorf("not-found")
-	// }
-	// if cb, ok := found["createdBy"]; ok {
-	// 	record.CreatedBy = cb.(string)
-	// }
-	// if ca, ok := found["createdAt"]; ok {
-	// 	record.CreatedAt = ca.(int64)
-	// }
 
-	// return m.Collection.UpdateId(found["_id"], record)
 	res, err := m.getRepository().GetOne(backends.NewFilter().Match("id", policy.GetID()), &db.PolicyRecord{})
 	if err != nil {
 		if backends.IsErrNotFound(err) {
@@ -180,22 +162,6 @@ func (m *BackendLadonManager) Update(policy ladon.Policy) error {
 
 // Get retrieves a policy.
 func (m *BackendLadonManager) Get(id string) (ladon.Policy, error) {
-	// mpr := db.PolicyRecord{}
-	// err := m.Collection.Find(bson.M{
-	// 	"id": id,
-	// }).One(&mpr)
-
-	// if err != nil {
-	// 	if err.Error() == "not found" {
-	// 		return nil, nil
-	// 	}
-	// 	return nil, err
-	// }
-
-	// if mpr.ID == "" {
-	// 	return nil, nil
-	// }
-
 	res, err := m.getRepository().GetOne(backends.NewFilter().Match("id", id), &db.PolicyRecord{})
 	if err != nil {
 		if backends.IsErrNotFound(err) {
@@ -210,27 +176,11 @@ func (m *BackendLadonManager) Get(id string) (ladon.Policy, error) {
 // Delete removes a policy.
 func (m *BackendLadonManager) Delete(id string) error {
 	return m.getRepository().DeleteAll(backends.NewFilter().Match("id", id))
-	// return m.Collection.Remove(bson.M{
-	// 	"id": id,
-	// })
 }
 
 // GetAll retrieves all policies.
 func (m *BackendLadonManager) GetAll(limit, offset int64) (ladon.Policies, error) {
 	policies := ladon.Policies{}
-	//records := []db.PolicyRecord{}
-	// err := m.Collection.Find(bson.M{}).Skip(int(offset)).Limit(int(limit)).All(&records)
-
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// for _, mpr := range records {
-	// 	policy, e := toLadonPolicy(&mpr)
-	// 	if e != nil {
-	// 		return nil, e
-	// 	}
-	// 	policies = append(policies, policy)
-	// }
 	result, err := m.getRepository().GetAll(nil, &db.PolicyRecord{}, "createdOn", "desc", int(limit), int(offset))
 	if err != nil {
 		return nil, err
@@ -256,29 +206,6 @@ func (m *BackendLadonManager) GetAll(limit, offset int64) (ladon.Policies, error
 // a set that exactly matches the request, or a superset of it. If an error occurs, it returns nil and
 // the error.
 func (m *BackendLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Policies, error) {
-
-	// Multiple filters here:
-	// Step 1 - match Resource by regex in mongo, AND
-	// step 2 - match subjects by regex in mongo (array), AND
-	// step 3 - match actions by regex in mongo
-	//results := []db.PolicyRecord{}
-	// err := m.Collection.Find(bson.M{
-	// 	"$and": []bson.M{
-	// 		bson.M{
-	// 			"$where": fmt.Sprintf("this.compiledResources.filter(function(rc){ return RegExp(rc).test('%s'); }).length > 0", r.Resource),
-	// 		},
-	// 		bson.M{
-	// 			"$where": fmt.Sprintf("this.compiledSubjects.filter(function(sub){ return RegExp(sub).test('%s'); }).length > 0", r.Subject),
-	// 		},
-	// 		bson.M{
-	// 			"$where": fmt.Sprintf("this.compiledActions.filter(function(act){ return RegExp(act).test('%s'); }).length > 0", r.Action),
-	// 		},
-	// 	},
-	// }).All(&results)
-
-	// if err != nil {
-	// 	return nil, err
-	// }
 	results, err := m.getACLRepository().FindPolicies(map[string]string{
 		"resource": r.Resource,
 		"subject":  r.Subject,
@@ -293,15 +220,6 @@ func (m *BackendLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Pol
 
 // FindPoliciesForSubject retrieves all ladon.Policy candidates that can handle a request for a given subject.
 func (m *BackendLadonManager) FindPoliciesForSubject(subject string) (ladon.Policies, error) {
-	// results := []db.PolicyRecord{}
-
-	// err := m.Collection.Find(bson.M{
-	// 	"$where": fmt.Sprintf("this.compiledSubjects.filter(function(sub){ return RegExp(sub).test('%s'); }).length > 0", subject),
-	// }).All(&results)
-
-	// if err != nil {
-	// 	return nil, err
-	// }
 	results, err := m.getACLRepository().FindPolicies(map[string]string{
 		"subject": subject,
 	})
@@ -315,15 +233,6 @@ func (m *BackendLadonManager) FindPoliciesForSubject(subject string) (ladon.Poli
 
 // FindPoliciesForResource retrieves all ladon.Policy candidates that can handle a request for a given resource.
 func (m *BackendLadonManager) FindPoliciesForResource(resource string) (ladon.Policies, error) {
-	// results := []db.PolicyRecord{}
-
-	// err := m.Collection.Find(bson.M{
-	// 	"$where": fmt.Sprintf("this.compiledResources.filter(function(rc){ return RegExp(rc).test('%s'); }).length > 0", resource),
-	// }).All(&results)
-
-	// if err != nil {
-	// 	return nil, err
-	// }
 	results, err := m.getACLRepository().FindPolicies(map[string]string{
 		"resource": resource,
 	})
@@ -377,13 +286,14 @@ func NewBackendLadonManager(cfg *config.DBConfig) (*BackendLadonManager, func(),
 	}
 
 	if _, err = backend.DefineRepository("ACL", backends.RepositoryDefinitionMap{
-		"customId":       true, // we generate our own IDs
-		"name":           "ACL",
-		"enableTtl":      false,
-		"hashKey":        "id",
-		"rangeKey":       "createdAt",
-		"readCapacity":   50,
-		"writeCapacipty": 50,
+		"customId":      true, // we generate our own IDs
+		"name":          "ACL",
+		"enableTtl":     false,
+		"hashKey":       "id",
+		"rangeKey":      "createdAt",
+		"rangeKeyType":  "N",
+		"readCapacity":  50,
+		"writeCapacity": 50,
 		"indexes": []backends.Index{
 			backends.NewUniqueIndex("id"),
 			backends.NewNonUniqueIndex("createdAt"),
@@ -398,39 +308,4 @@ func NewBackendLadonManager(cfg *config.DBConfig) (*BackendLadonManager, func(),
 			return cfg.DBName
 		},
 	}, noop, nil
-}
-
-// NewBackendLadonManager builds a BackendLadonManager for the given database configuration.
-func NewBackendLadonManager_old(config *config.DBConfig) (*BackendLadonManager, func(), error) {
-	session, err := mgo.DialWithInfo(&mgo.DialInfo{
-		Addrs:    []string{config.Host},
-		Username: config.Username,
-		Password: config.Password,
-		Database: config.DatabaseName,
-		Timeout:  30 * time.Second,
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-	// SetMode - consistency mode for the session.
-	session.SetMode(mgo.Monotonic, true)
-
-	collection := session.DB(config.DatabaseName).C("ACL")
-
-	err = collection.EnsureIndex(mgo.Index{
-		Background: true,
-		Key:        []string{"id"},
-		DropDups:   true,
-		Unique:     true,
-	})
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &BackendLadonManager{
-			//Collection: collection,
-		}, func() {
-			session.Close()
-		}, nil
 }

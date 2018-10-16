@@ -24,10 +24,12 @@ func reverseRegexpMatch(property, value string) string {
 	return fmt.Sprintf("this.%s.filter(function(rc){ return RegExp(rc).test('%s'); }).length > 0", property, value)
 }
 
+// ACLSecurityMongoRepo extends the backends.Repository and implements ACLRepository.
 type ACLSecurityMongoRepo struct {
 	*backends.MongoCollection
 }
 
+// FindPolicies performs a lookup in the MongoDB to find policies that match the provided values for action, subject and/or resource.
 func (a *ACLSecurityMongoRepo) FindPolicies(filter map[string]string) ([]*PolicyRecord, error) {
 	results := []PolicyRecord{}
 
@@ -75,6 +77,7 @@ func (a *ACLSecurityMongoRepo) FindPolicies(filter map[string]string) ([]*Policy
 	return policyRecords, nil
 }
 
+// ACLSecurityMongoRepoExtender extends the incomping backends.Repository and wraps it in ACLSecurityMongoRepo.
 func ACLSecurityMongoRepoExtender(repo backends.Repository) backends.Repository {
 	mongoCollection, ok := repo.(*backends.MongoCollection)
 	if !ok {

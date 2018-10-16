@@ -30,7 +30,12 @@ type PolicyRecord struct {
 	// CreatedBy is the user id of the user who created this policy
 	CreatedBy string `json:"createdBy" bson:"createdBy"`
 
-	CompiledActions   []string `json:"compiledActions" bson:"compiledActions"`
+	// CompiledActions is the compiled regular expression to match the action.
+	CompiledActions []string `json:"compiledActions" bson:"compiledActions"`
+
+	// CompiledResources is the compiled regular expression to match the resource.
 	CompiledResources []string `json:"compiledResources" bson:"compiledResources"`
-	CompiledSubjects  []string `json:"compiledSubjects" bson:"compiledSubjects"`
+
+	// CompiledSubjects is the compiled regular expression to match the subject.
+	CompiledSubjects []string `json:"compiledSubjects" bson:"compiledSubjects"`
 }
