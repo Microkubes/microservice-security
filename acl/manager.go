@@ -2,60 +2,28 @@ package acl
 
 import (
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/JormungandrK/backends"
+
+	"github.com/Microkubes/microservice-security/acl/db"
 	"github.com/Microkubes/microservice-security/auth"
 	"github.com/Microkubes/microservice-tools/config"
 	"github.com/ory/ladon"
 	"github.com/ory/ladon/compiler"
 	uuid "github.com/satori/go.uuid"
-	mgo "gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 )
 
-// MongoPolicyRecord is an ACL policy stored in Mongodb.
-type MongoPolicyRecord struct {
-
-	// The ID of the policy document
-	ID string `json:"id" bson:"id"`
-
-	// Description is the human readable description of the document.
-	Description string `json:"description" bson:"description"`
-
-	// List of subjects (may be patterns) to which this policy applies.
-	Subjects []string `json:"subjects" bson:"subjects"`
-
-	// Effect is the effect of this policy if applied to the requested resource. May be "allow" or "deny".
-	Effect string `json:"effect" bson:"effect"`
-
-	// Resources is a list of resources (may be patterns) to which this policy applies.
-	Resources []string `json:"resources" bson:"resources"`
-
-	// Actions is a list of actions (may be patterns) to which this policy applies.
-	Actions []string `json:"actions" bson:"actions"`
-
-	// CreatedAt is a timestamp of when this policy was created.
-	CreatedAt int64 `json:"createdAt" bson:"createdAt"`
-
-	// Conditions holds the conditions serialized as JSON string.
-	Conditions string `json:"conditions" bson:"conditions"`
-
-	// CreatedBy is the user id of the user who created this policy
-	CreatedBy string `json:"createdBy" bson:"createdBy"`
-
-	CompiledActions   []string `json:"compiledActions" bson:"compiledActions"`
-	CompiledResources []string `json:"compiledResources" bson:"compiledResources"`
-	CompiledSubjects  []string `json:"compiledSubjects" bson:"compiledSubjects"`
-}
-
-// MongoDBLadonManager holds the mongo collection for storing the ladon policies
+// BackendLadonManager holds the mongo collection for storing the ladon policies
 // in a Mongodb backend.
-type MongoDBLadonManager struct {
-	*mgo.Collection
+type BackendLadonManager struct {
+	backendManager      backends.BackendManager
+	backendTypeProvider func() string
 }
 
-func toMongoRecord(policy ladon.Policy) (*MongoPolicyRecord, error) {
-	mpr := MongoPolicyRecord{
+func toMongoRecord(policy ladon.Policy) (*db.PolicyRecord, error) {
+	mpr := db.PolicyRecord{
 		ID:          policy.GetID(),
 		Description: policy.GetDescription(),
 		Actions:     policy.GetActions(),
@@ -100,7 +68,7 @@ func getCompiledRegex(values []string, startDelimiter byte, endDelimiter byte) (
 	return compiled, nil
 }
 
-func toLadonPolicy(mpr *MongoPolicyRecord) (ladon.Policy, error) {
+func toLadonPolicy(mpr *db.PolicyRecord) (ladon.Policy, error) {
 	defPolicy := ladon.DefaultPolicy{
 		Actions:     mpr.Actions,
 		Description: mpr.Description,
@@ -122,11 +90,11 @@ func toLadonPolicy(mpr *MongoPolicyRecord) (ladon.Policy, error) {
 	return &defPolicy, nil
 }
 
-func toLadonPolicies(policyRecords []MongoPolicyRecord) (ladon.Policies, error) {
+func toLadonPolicies(policyRecords []*db.PolicyRecord) (ladon.Policies, error) {
 	policies := []ladon.Policy{}
 
 	for _, record := range policyRecords {
-		policy, err := toLadonPolicy(&record)
+		policy, err := toLadonPolicy(record)
 		if err != nil {
 			return nil, err
 		}
@@ -137,12 +105,12 @@ func toLadonPolicies(policyRecords []MongoPolicyRecord) (ladon.Policies, error) 
 }
 
 // Create persists the policy.
-func (m *MongoDBLadonManager) Create(policy ladon.Policy) error {
-	return fmt.Errorf("use MongoDBLadonManager.CreateWithAuth instead")
+func (m *BackendLadonManager) Create(policy ladon.Policy) error {
+	return fmt.Errorf("use BackendLadonManager.CreateWithAuth instead")
 }
 
 // CreateWithAuth persists the policy. It also sets the "createdBy" property to the provided authentication.
-func (m *MongoDBLadonManager) CreateWithAuth(policy ladon.Policy, authObj *auth.Auth) error {
+func (m *BackendLadonManager) CreateWithAuth(policy ladon.Policy, authObj *auth.Auth) error {
 	if authObj == nil || authObj.UserID == "" {
 		return fmt.Errorf("no auth provided")
 	}
@@ -161,74 +129,70 @@ func (m *MongoDBLadonManager) CreateWithAuth(policy ladon.Policy, authObj *auth.
 
 	record.CreatedBy = authObj.UserID
 
-	return m.Collection.Insert(record)
+	_, err = m.getRepository().Save(record, nil)
+
+	return err
 }
 
 // Update updates an existing policy.
-func (m *MongoDBLadonManager) Update(policy ladon.Policy) error {
+func (m *BackendLadonManager) Update(policy ladon.Policy) error {
 	record, err := toMongoRecord(policy)
 	if err != nil {
 		return err
 	}
-	found := map[string]interface{}{}
-	err = m.Collection.Find(bson.M{
-		"id": policy.GetID(),
-	}).One(found)
+
+	res, err := m.getRepository().GetOne(backends.NewFilter().Match("id", policy.GetID()), &db.PolicyRecord{})
 	if err != nil {
+		if backends.IsErrNotFound(err) {
+			return fmt.Errorf("not-found")
+		}
 		return err
 	}
-	if _, ok := found["id"]; !ok {
-		return fmt.Errorf("not-found")
+	exsting := res.(*db.PolicyRecord)
+	if exsting.CreatedAt != 0 {
+		record.CreatedAt = exsting.CreatedAt
 	}
-	if cb, ok := found["createdBy"]; ok {
-		record.CreatedBy = cb.(string)
-	}
-	if ca, ok := found["createdAt"]; ok {
-		record.CreatedAt = ca.(int64)
+	if exsting.CreatedBy != "" {
+		record.CreatedBy = exsting.CreatedBy
 	}
 
-	return m.Collection.UpdateId(found["_id"], record)
+	_, err = m.getRepository().Save(record, backends.NewFilter().Match("id", record.ID))
+	return err
 }
 
 // Get retrieves a policy.
-func (m *MongoDBLadonManager) Get(id string) (ladon.Policy, error) {
-	mpr := MongoPolicyRecord{}
-	err := m.Collection.Find(bson.M{
-		"id": id,
-	}).One(&mpr)
-
+func (m *BackendLadonManager) Get(id string) (ladon.Policy, error) {
+	res, err := m.getRepository().GetOne(backends.NewFilter().Match("id", id), &db.PolicyRecord{})
 	if err != nil {
-		if err.Error() == "not found" {
+		if backends.IsErrNotFound(err) {
 			return nil, nil
 		}
 		return nil, err
 	}
 
-	if mpr.ID == "" {
-		return nil, nil
-	}
-
-	return toLadonPolicy(&mpr)
+	return toLadonPolicy(res.(*db.PolicyRecord))
 }
 
 // Delete removes a policy.
-func (m *MongoDBLadonManager) Delete(id string) error {
-	return m.Collection.Remove(bson.M{
-		"id": id,
-	})
+func (m *BackendLadonManager) Delete(id string) error {
+	return m.getRepository().DeleteAll(backends.NewFilter().Match("id", id))
 }
 
 // GetAll retrieves all policies.
-func (m *MongoDBLadonManager) GetAll(limit, offset int64) (ladon.Policies, error) {
+func (m *BackendLadonManager) GetAll(limit, offset int64) (ladon.Policies, error) {
 	policies := ladon.Policies{}
-	records := []MongoPolicyRecord{}
-	err := m.Collection.Find(bson.M{}).Skip(int(offset)).Limit(int(limit)).All(&records)
-
+	result, err := m.getRepository().GetAll(nil, &db.PolicyRecord{}, "createdOn", "desc", int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
+
+	records, ok := result.([]*db.PolicyRecord)
+	if !ok {
+		return nil, fmt.Errorf("type conversion failed - result is not []*db.PolicyRecord")
+	}
+
 	for _, mpr := range records {
-		policy, e := toLadonPolicy(&mpr)
+		policy, e := toLadonPolicy(mpr)
 		if e != nil {
 			return nil, e
 		}
@@ -241,27 +205,12 @@ func (m *MongoDBLadonManager) GetAll(limit, offset int64) (ladon.Policies, error
 // FindRequestCandidates returns candidates that could match the request object. It either returns
 // a set that exactly matches the request, or a superset of it. If an error occurs, it returns nil and
 // the error.
-func (m *MongoDBLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Policies, error) {
-
-	// Multiple filters here:
-	// Step 1 - match Resource by regex in mongo, AND
-	// step 2 - match subjects by regex in mongo (array), AND
-	// step 3 - match actions by regex in mongo
-	results := []MongoPolicyRecord{}
-	err := m.Collection.Find(bson.M{
-		"$and": []bson.M{
-			bson.M{
-				"$where": fmt.Sprintf("this.compiledResources.filter(function(rc){ return RegExp(rc).test('%s'); }).length > 0", r.Resource),
-			},
-			bson.M{
-				"$where": fmt.Sprintf("this.compiledSubjects.filter(function(sub){ return RegExp(sub).test('%s'); }).length > 0", r.Subject),
-			},
-			bson.M{
-				"$where": fmt.Sprintf("this.compiledActions.filter(function(act){ return RegExp(act).test('%s'); }).length > 0", r.Action),
-			},
-		},
-	}).All(&results)
-
+func (m *BackendLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Policies, error) {
+	results, err := m.getACLRepository().FindPolicies(map[string]string{
+		"resource": r.Resource,
+		"subject":  r.Subject,
+		"action":   r.Action,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -270,12 +219,10 @@ func (m *MongoDBLadonManager) FindRequestCandidates(r *ladon.Request) (ladon.Pol
 }
 
 // FindPoliciesForSubject retrieves all ladon.Policy candidates that can handle a request for a given subject.
-func (m *MongoDBLadonManager) FindPoliciesForSubject(subject string) (ladon.Policies, error) {
-	results := []MongoPolicyRecord{}
-
-	err := m.Collection.Find(bson.M{
-		"$where": fmt.Sprintf("this.compiledSubjects.filter(function(sub){ return RegExp(sub).test('%s'); }).length > 0", subject),
-	}).All(&results)
+func (m *BackendLadonManager) FindPoliciesForSubject(subject string) (ladon.Policies, error) {
+	results, err := m.getACLRepository().FindPolicies(map[string]string{
+		"subject": subject,
+	})
 
 	if err != nil {
 		return nil, err
@@ -285,12 +232,10 @@ func (m *MongoDBLadonManager) FindPoliciesForSubject(subject string) (ladon.Poli
 }
 
 // FindPoliciesForResource retrieves all ladon.Policy candidates that can handle a request for a given resource.
-func (m *MongoDBLadonManager) FindPoliciesForResource(resource string) (ladon.Policies, error) {
-	results := []MongoPolicyRecord{}
-
-	err := m.Collection.Find(bson.M{
-		"$where": fmt.Sprintf("this.compiledResources.filter(function(rc){ return RegExp(rc).test('%s'); }).length > 0", resource),
-	}).All(&results)
+func (m *BackendLadonManager) FindPoliciesForResource(resource string) (ladon.Policies, error) {
+	results, err := m.getACLRepository().FindPolicies(map[string]string{
+		"resource": resource,
+	})
 
 	if err != nil {
 		return nil, err
@@ -299,37 +244,68 @@ func (m *MongoDBLadonManager) FindPoliciesForResource(resource string) (ladon.Po
 	return toLadonPolicies(results)
 }
 
-// NewMongoDBLadonManager builds a MongoDBLadonManager for the given database configuration.
-func NewMongoDBLadonManager(config *config.DBConfig) (*MongoDBLadonManager, func(), error) {
-	session, err := mgo.DialWithInfo(&mgo.DialInfo{
-		Addrs:    []string{config.Host},
-		Username: config.Username,
-		Password: config.Password,
-		Database: config.DatabaseName,
-		Timeout:  30 * time.Second,
-	})
+func (m *BackendLadonManager) getRepository() backends.Repository {
+	backendType := m.backendTypeProvider()
+	backend, err := m.backendManager.GetBackend(m.backendTypeProvider())
 	if err != nil {
-		return nil, nil, err
+		log.Fatalf("Failed to get backend of type '%s': %s\n", backendType, err.Error())
 	}
-	// SetMode - consistency mode for the session.
-	session.SetMode(mgo.Monotonic, true)
+	repository, err := backend.GetRepository("ACL")
+	if err != nil {
+		log.Fatal("Failed to setup ACL repository: ", err.Error())
+	}
+	return repository
+}
 
-	collection := session.DB(config.DatabaseName).C("ACL")
+func (m *BackendLadonManager) getACLRepository() db.ACLRepository {
+	repo := m.getRepository()
+	aclRepo, ok := repo.(db.ACLRepository)
+	if !ok {
+		log.Fatal("The underlying backend does not support ACL extended repository actions.")
+	}
+	return aclRepo
+}
 
-	err = collection.EnsureIndex(mgo.Index{
-		Background: true,
-		Key:        []string{"id"},
-		DropDups:   true,
-		Unique:     true,
+// NewBackendLadonManager builds a BackendLadonManager for the given database configuration.
+func NewBackendLadonManager(cfg *config.DBConfig) (*BackendLadonManager, func(), error) {
+	manager := backends.NewBackendSupport(map[string]*config.DBInfo{
+		cfg.DBName: &cfg.DBInfo,
+	})
+	manager = db.WrapBackendManager(manager, map[string]db.RepoExtender{
+		"mongodb":  db.ACLSecurityMongoRepoExtender,
+		"dynamodb": db.ACLSecurityDynamoRepoExtender,
 	})
 
+	noop := func() {}
+
+	// let's define the repositories
+
+	backend, err := manager.GetBackend(cfg.DBName)
 	if err != nil {
-		return nil, nil, err
+		return nil, noop, err
 	}
 
-	return &MongoDBLadonManager{
-			Collection: collection,
-		}, func() {
-			session.Close()
-		}, nil
+	if _, err = backend.DefineRepository("ACL", backends.RepositoryDefinitionMap{
+		"customId":      true, // we generate our own IDs
+		"name":          "ACL",
+		"enableTtl":     false,
+		"hashKey":       "id",
+		"rangeKey":      "createdAt",
+		"rangeKeyType":  "N",
+		"readCapacity":  50,
+		"writeCapacity": 50,
+		"indexes": []backends.Index{
+			backends.NewUniqueIndex("id"),
+			backends.NewNonUniqueIndex("createdAt"),
+		},
+	}); err != nil {
+		return nil, noop, err
+	}
+
+	return &BackendLadonManager{
+		backendManager: manager,
+		backendTypeProvider: func() string {
+			return cfg.DBName
+		},
+	}, noop, nil
 }
