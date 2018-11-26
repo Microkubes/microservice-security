@@ -51,7 +51,8 @@ func TestFromGoaMiddleware(t *testing.T) {
 
 	chain := NewSecurityChain().AddMiddleware(FromGoaMiddleware(goaMiddleware))
 
-	ctx, _, _, err := chain.Execute(context.Background(), nil, nil)
+	req, _ := http.NewRequest("GET", "http://example.com/test", nil)
+	ctx, _, _, err := chain.Execute(context.Background(), nil, req)
 	if err != nil {
 		t.Fatal("Expected NOT get errors during chain execute.")
 	}
@@ -71,9 +72,11 @@ func TestToSecurityChainMiddleware(t *testing.T) {
 	}
 	chain := NewSecurityChain().AddMiddleware(ToSecurityChainMiddleware("TEST", goaMiddleware))
 
-	ctx, _, _, err := chain.Execute(context.Background(), nil, nil)
+	req, _ := http.NewRequest("GET", "http://example.com/test", nil)
+	ctx, _, _, err := chain.Execute(context.Background(), nil, req)
+
 	if err != nil {
-		t.Fatal("Expected NOT get errors during chain execute.")
+		t.Fatal("Expected NOT to get errors during chain execute.")
 	}
 	errors := auth.GetSecurityErrors(ctx)
 	if errors == nil {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"context"
 )
@@ -32,16 +33,16 @@ type SecurityChain interface {
 	// AddMiddleware adds new SecurityChainMiddleware to the end of the security chain.
 	AddMiddleware(middleware SecurityChainMiddleware) SecurityChain
 
-	// AddMiddlewareType adds a middleware to the end of the chain. The acutal SecurityChainMiddleware
+	// AddMiddlewareType adds a middleware to the end of the chain. The actual SecurityChainMiddleware
 	// is build by calling the MiddlewareBuilder for the specific registered type of middleware.
-	// See NewSecuirty function for retgistering MiddlewareBuilder for a specific security middleware.
+	// See NewSecurity function for registering MiddlewareBuilder for a specific security middleware.
 	AddMiddlewareType(middlewareType string) (SecurityChain, error)
 
 	// Execute executes the security chain.
-	// It takes context.Context htto.ResponseWriter and a pointer to http.Request as arguments.
+	// It takes context.Context http.ResponseWriter and a pointer to http.Request as arguments.
 	// After executing all SecurityChainMiddleware in the chain, it returns the resulting context.Context,
 	// http.ResponseWriter and *http.Request. This may be different from the parameters passed to the function.
-	// If an error occured during executing the chain, and error is returned.
+	// If an error occurred during executing the chain, and error is returned.
 	Execute(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, *http.Request, error)
 
 	// AddIgnorePattern adds a pattern for the request path that will be ignored by this chain.
@@ -51,12 +52,17 @@ type SecurityChain interface {
 	// If the pattern is invalid, an error will be returned and the pattern is not added to the
 	// list of ignore patterns.
 	AddIgnorePattern(pattern string) error
+
+	// IgnoreHTTPMethod add an HTTP method that will be ignored. Every HTTP request with this method (verb) shall
+	// be passed through and ignored by the security chain.
+	IgnoreHTTPMethod(method string)
 }
 
 // Chain represents a SecurityChain and holds a list of all SecurityChainMiddleware in the order as they are added.
 type Chain struct {
-	MiddlewareList []SecurityChainMiddleware
-	IgnorePatterns []*regexp.Regexp
+	MiddlewareList     []SecurityChainMiddleware
+	IgnorePatterns     []*regexp.Regexp
+	IgnoredHTTPMethods []string
 }
 
 // AddMiddleware appends a SecurityChainMiddleware to the end of middleware list in the chain.
@@ -80,7 +86,7 @@ func (chain *Chain) AddMiddlewareType(middlewareType string) (SecurityChain, err
 // Execute executes the security chain by calling all SecurityChainMiddleware in the middleware list in the
 // order as they are added.
 func (chain *Chain) Execute(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, *http.Request, error) {
-	if chain.isRequestIgnoredPattern(req) {
+	if !chain.preflightCheck(req) {
 		return ctx, rw, req, nil
 	}
 	var err error
@@ -117,6 +123,35 @@ func (chain *Chain) AddIgnorePattern(pattern string) error {
 	}
 	chain.IgnorePatterns = append(chain.IgnorePatterns, reg)
 	return nil
+}
+
+func (chain *Chain) preflightCheck(req *http.Request) bool {
+	// check HTTP request method
+	if !chain.checkHTTPMethod(req.Method) {
+		return false
+	}
+	if chain.isRequestIgnoredPattern(req) {
+		return false
+	}
+	return true
+}
+
+func (chain *Chain) checkHTTPMethod(method string) bool {
+	if chain.IgnoredHTTPMethods == nil {
+		return true
+	}
+	for _, ignoredMethod := range chain.IgnoredHTTPMethods {
+		if ignoredMethod == method {
+			return false
+		}
+	}
+	return true
+}
+
+// IgnoreHTTPMethod add an HTTP method to be ignored by the security chain.
+func (chain *Chain) IgnoreHTTPMethod(method string) {
+	method = strings.ToUpper(method)
+	chain.IgnoredHTTPMethods = append(chain.IgnoredHTTPMethods, method)
 }
 
 // SecurityMiddlewareBuilders is a map that maps a security type to a specific MiddlewareBuilder.
@@ -160,7 +195,9 @@ func buildSecurityMiddleware(mechanismType string) (SecurityChainMiddleware, err
 func NewSecurityChain() SecurityChain {
 	var middlewareList []SecurityChainMiddleware
 	return &Chain{
-		MiddlewareList: middlewareList,
+		MiddlewareList:     middlewareList,
+		IgnorePatterns:     []*regexp.Regexp{},
+		IgnoredHTTPMethods: []string{},
 	}
 }
 

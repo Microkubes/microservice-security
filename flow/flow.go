@@ -74,6 +74,14 @@ func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, Clea
 		}
 	}
 
+	if cfg.IgnoreHTTPMethods != nil {
+		for _, method := range cfg.IgnoreHTTPMethods {
+			securityChain.IgnoreHTTPMethod(method)
+		}
+	} else {
+		securityChain.IgnoreHTTPMethod("OPTIONS")
+	}
+
 	managerCleanup := func() {}
 	samlCleanup := func() {}
 

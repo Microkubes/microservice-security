@@ -55,7 +55,7 @@ func TestAddMiddleware(t *testing.T) {
 	})
 
 	if len(chain.MiddlewareList) == 0 {
-		t.Fatal("Excpected to add the SecurityChainMiddleware.")
+		t.Fatal("Expected to add the SecurityChainMiddleware.")
 	}
 }
 
@@ -104,7 +104,8 @@ func TestSecurityChainExecute(t *testing.T) {
 	chain.MiddlewareList = append(chain.MiddlewareList, TestMiddleware("middleware-2"))
 	chain.MiddlewareList = append(chain.MiddlewareList, TestMiddleware("middleware-3"))
 
-	chain.Execute(context.Background(), nil, nil)
+	request, _ := http.NewRequest("GET", "http://example.com/test", nil)
+	chain.Execute(context.Background(), nil, request)
 
 	for name, done := range handlers {
 		if !done {
@@ -188,7 +189,8 @@ func TestAsSecurityMiddleware(t *testing.T) {
 
 	parentChain.MiddlewareList = append(parentChain.MiddlewareList, wrappedChainMiddleware)
 
-	parentChain.Execute(context.Background(), nil, nil)
+	req, _ := http.NewRequest("GET", "http://example.com/test", nil)
+	parentChain.Execute(context.Background(), nil, req)
 
 	if !innerMiddlewareCalled {
 		t.Fatal("Expected the middleware in the inner security chain to be called.")
