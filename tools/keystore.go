@@ -3,6 +3,10 @@ package tools
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path"
+
+	"strings"
 
 	jwtgo "github.com/dgrijalva/jwt-go"
 )
@@ -70,4 +74,46 @@ func NewFileKeyStore(keyFiles map[string]string) (KeyStore, error) {
 	}
 	keyStore.PrivateKey = defaultKey
 	return &keyStore, nil
+}
+
+// NewDirKeyStore returns a directory-based KeyStore implementation.
+// The keys are loaded from the directory by scanning the directory
+// for private keys.
+// The functions expects to be at least one key with name "default" defined.
+// The keys must be RSA keys and the files must be PEM.
+func NewDirKeyStore(keysDir string) (KeyStore, error) {
+	fi, err := os.Stat(keysDir)
+	if err != nil {
+		return nil, err
+	}
+	if !fi.Mode().IsDir() {
+		return nil, fmt.Errorf("directory must be provided")
+	}
+	files, err := ioutil.ReadDir(keysDir)
+	if err != nil {
+		return nil, err
+	}
+	keysMap := map[string]string{}
+	for _, file := range files {
+		if !file.IsDir() {
+			name := file.Name()
+			if suffix := hasAnySuffix(name, ".pub", ".pubk", ".pk"); suffix == nil {
+				keysMap[name] = path.Join(keysDir, name)
+			}
+		}
+	}
+	return NewFileKeyStore(keysMap)
+}
+
+// hasAnySuffix checks if 'name' starts with any of the supplied suffixes.
+func hasAnySuffix(name string, suffixes ...string) *string {
+	var suffix *string
+	name = strings.ToLower(name)
+	for _, sfx := range suffixes {
+		if strings.HasSuffix(name, sfx) {
+			suffix = &sfx
+			break
+		}
+	}
+	return suffix
 }
