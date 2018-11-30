@@ -105,6 +105,7 @@ func NewDirKeyStore(keysDir string) (KeyStore, error) {
 	return NewFileKeyStore(keysMap)
 }
 
+// hasAnySuffix checks if 'name' starts with any of the supplied suffixes.
 func hasAnySuffix(name string, suffixes ...string) *string {
 	var suffix *string
 	name = strings.ToLower(name)

@@ -23,8 +23,8 @@ import (
 	"github.com/ory/ladon"
 )
 
-// CleanupFn defines a function used for cleanup. Usially you would like to defer this function
-// for after the whole process is done and you need to clen up before shutting down.
+// CleanupFn defines a function used for cleanup. Usually you would like to defer this function
+// for after the whole process is done and you need to clean up before shutting down.
 type CleanupFn func()
 
 // ConfiguredSecurity holds the entities of the fully configured security. It holds
