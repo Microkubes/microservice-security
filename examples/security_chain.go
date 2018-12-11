@@ -126,7 +126,7 @@ func SecurityChainExample() {
 	}
 }
 
-// SecurityChainExampleFailAuth illustrates settig up a security chain same as SecurityChainExample,
+// SecurityChainExampleFailAuth illustrates setting up a security chain same as SecurityChainExample,
 // but the request contains wrong authentication and the chain returns an error.
 func SecurityChainExampleFailAuth() {
 	// Create the security chain

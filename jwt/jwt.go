@@ -39,19 +39,15 @@ func NewKeyResolver(path string) (goajwt.KeyResolver, error) {
 func NewJWTSecurityMiddleware(resolver goajwt.KeyResolver, scheme *goa.JWTSecurity) chain.SecurityChainMiddleware {
 	goaMiddleware := goajwt.New(resolver, func(handler goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-			fmt.Println("JWT post processing")
 			jwtToken := goajwt.ContextJWT(ctx)
 			claims := jwtToken.Claims.(jwt.MapClaims)
 
 			if _, ok := claims["username"]; !ok {
-				fmt.Println("Username missing")
 				return jwt.NewValidationError("Username is missing", jwt.ValidationErrorClaimsInvalid)
 			}
 			if _, ok := claims["userId"]; !ok {
-				fmt.Println("Password missing")
 				return jwt.NewValidationError("User ID is missing", jwt.ValidationErrorClaimsInvalid)
 			}
-			fmt.Println("Username and userID OK")
 			roles := []string{}
 			organizations := []string{}
 			namespaces := []string{}
@@ -60,7 +56,6 @@ func NewJWTSecurityMiddleware(resolver goajwt.KeyResolver, scheme *goa.JWTSecuri
 
 			username = claims["username"].(string)
 			if _, ok := claims["userId"].(string); !ok {
-				fmt.Printf("User ID is not string? Then what is it? -> %v\n", claims["userId"])
 				return jwt.NewValidationError("Invalid user ID", jwt.ValidationErrorClaimsInvalid)
 			}
 			userID = claims["userId"].(string)
@@ -82,7 +77,6 @@ func NewJWTSecurityMiddleware(resolver goajwt.KeyResolver, scheme *goa.JWTSecuri
 				UserID:        userID,
 				Namespaces:    namespaces,
 			}
-			fmt.Printf("Auth created: %v\n", authObj)
 			return handler(auth.SetAuth(ctx, authObj), rw, req)
 		}
 	}, scheme)
