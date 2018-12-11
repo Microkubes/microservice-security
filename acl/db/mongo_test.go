@@ -3,7 +3,7 @@ package db
 import (
 	"testing"
 
-	"github.com/JormungandrK/backends"
+	"github.com/Microkubes/backends"
 )
 
 func TestTypeConversion(t *testing.T) {

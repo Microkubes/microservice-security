@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/JormungandrK/backends"
+	"github.com/Microkubes/backends"
 )
 
 // ExtendedBackend wraps a backends.Backend and adds capabilities for creating repositories
