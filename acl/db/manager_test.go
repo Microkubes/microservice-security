@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/JormungandrK/backends"
+	"github.com/Microkubes/backends"
 	"github.com/Microkubes/microservice-tools/config"
 )
 
