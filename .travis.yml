@@ -11,11 +11,11 @@ go:
 before_install:
   - go get github.com/axw/gocov/gocov
   - go get github.com/AlekSi/gocov-xml
+  - go get github.com/goadesign/goa/...
 
 install:
   - go get -u gopkg.in/h2non/gock.v1
   - go get -u github.com/crewjam/saml
-  - go get -u -v github.com/goadesign/goa/...
   - go get -u github.com/afex/hystrix-go/hystrix
   - go get -u github.com/ory/ladon/...
   - go get -u gopkg.in/mgo.v2
