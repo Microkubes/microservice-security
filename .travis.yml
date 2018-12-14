@@ -11,7 +11,6 @@ go:
 before_install:
   - go get github.com/axw/gocov/gocov
   - go get github.com/AlekSi/gocov-xml
-  - go get github.com/goadesign/goa/...
 
 install:
   - go get -u gopkg.in/h2non/gock.v1
@@ -21,6 +20,7 @@ install:
   - go get -u gopkg.in/mgo.v2
   - go get -u github.com/Microkubes/backends/...
   - go get -u github.com/Microkubes/microservice-tools
+  - go get -u github.com/goadesign/goa/...
 
 before_script:
   - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
