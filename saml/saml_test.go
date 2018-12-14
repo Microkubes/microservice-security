@@ -6,9 +6,11 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -78,18 +80,32 @@ UzreO96WzlBBMtY=
 }()
 
 var rootURL, _ = url.Parse("http://localhost:8082")
-var idpMetadataURL, _ = url.Parse("https://www.testshib.org/metadata/testshib-providers.xml")
-var samlSP, _ = samlsp.New(samlsp.Options{
-	IDPMetadataURL: idpMetadataURL,
-	URL:            *rootURL,
-	Key:            key.(*rsa.PrivateKey),
-	Certificate:    cert,
-})
 
 var samlConfig = &config.SAMLConfig{
 	IdentityProviderURL:    "http://127.0.0.1:8081/saml/idp",
 	RegistrationServiceURL: "http://127.0.0.1:8081/users",
 	UserServiceURL:         "http://127.0.0.1:8081/users",
+}
+var samlSP *samlsp.Middleware
+
+func TestMain(m *testing.M) {
+	var idpMetadataURL, _ = url.Parse("http://example.com/providers.xml")
+
+	var data, _ = ioutil.ReadFile("providers.xml")
+
+	gock.New("http://example.com").
+		Get("providers.xml").
+		Reply(200).
+		BodyString(string(data))
+
+	samlSP, _ = samlsp.New(samlsp.Options{
+		IDPMetadataURL: idpMetadataURL,
+		URL:            *rootURL,
+		Key:            key.(*rsa.PrivateKey),
+		Certificate:    cert,
+	})
+	code := m.Run()
+	os.Exit(code)
 }
 
 func TestNewSAMLSecurity(t *testing.T) {
