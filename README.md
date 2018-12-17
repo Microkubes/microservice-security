@@ -406,3 +406,7 @@ Here is an example of the configuration file:
 
 Note that if you don't want to use any of the JWT, OAuth2 or SAML security middlewares,
 you can omit the approriate subsections ("jwt", "oauth2" or "saml") from the "security" section.
+
+## Contributing
+
+For contributing to this repository or its documentation, see the [Contributing guidelines (CONTRIBUTING.md).
