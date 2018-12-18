@@ -409,4 +409,4 @@ you can omit the approriate subsections ("jwt", "oauth2" or "saml") from the "se
 
 ## Contributing
 
-For contributing to this repository or its documentation, see the [Contributing guidelines (CONTRIBUTING.md).
+For contributing to this repository or its documentation, see the [Contributing guidelines](CONTRIBUTING.md).
