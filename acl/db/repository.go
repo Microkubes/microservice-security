@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/JormungandrK/backends"
+	"github.com/Microkubes/backends"
 )
 
 // ACLRepository extends the backends.Repository interface by adding new functions
