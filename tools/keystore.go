@@ -3,6 +3,7 @@ package tools
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 
@@ -64,9 +65,11 @@ func NewFileKeyStore(keyFiles map[string]string) (KeyStore, error) {
 		}
 		privKey, err := jwtgo.ParseRSAPrivateKeyFromPEM(keyBytes)
 		if err != nil {
+			log.Println("Failed to load key:", keyFile, "; Err:", err.Error())
 			return nil, err
 		}
 		keyStore.KeysMap[keyName] = privKey
+		log.Println("Key loaded:", keyFile, "as", keyName)
 	}
 	defaultKey, ok := keyStore.KeysMap["default"]
 	if !ok {
@@ -97,7 +100,7 @@ func NewDirKeyStore(keysDir string) (KeyStore, error) {
 	for _, file := range files {
 		if !file.IsDir() {
 			name := file.Name()
-			if suffix := hasAnySuffix(name, ".pub", ".pubk", ".pk"); suffix == nil {
+			if suffix := hasAnySuffix(name, ".pub", ".pubk", ".pk", ".cert", ".crt", ".json", ".yaml", ".yml"); suffix == nil {
 				keysMap[name] = path.Join(keysDir, name)
 			}
 		}
