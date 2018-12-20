@@ -100,7 +100,7 @@ func NewDirKeyStore(keysDir string) (KeyStore, error) {
 	for _, file := range files {
 		if !file.IsDir() {
 			name := file.Name()
-			if suffix := hasAnySuffix(name, ".pub", ".pubk", ".pk", ".cert", ".crt"); suffix == nil {
+			if suffix := hasAnySuffix(name, ".pub", ".pubk", ".pk", ".cert", ".crt", ".json", ".yaml", ".yml"); suffix == nil {
 				keysMap[name] = path.Join(keysDir, name)
 			}
 		}
