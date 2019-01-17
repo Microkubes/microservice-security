@@ -83,7 +83,7 @@ func NewACLMiddleware(manager ladon.Manager) (chain.SecurityChainMiddleware, err
 	}, nil
 }
 
-// APIReadAction is "api:read". All HTTP methods except for POST, PUT and DELETE are considered to be "api:read" action.
+// APIReadAction is "api:read". All HTTP methods except for POST, PUT, PATCH and DELETE are considered to be "api:read" action.
 const APIReadAction = "api:read"
 
 // APIWriteAction is "api:write". HTTP methods POST, PUT and DELETE are considered "api:write" action.
@@ -94,6 +94,8 @@ func getAction(req *http.Request) string {
 	case "POST":
 		return APIWriteAction
 	case "PUT":
+		return APIWriteAction
+	case "PATCH":
 		return APIWriteAction
 	case "DELETE":
 		return APIWriteAction
