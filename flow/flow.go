@@ -114,13 +114,13 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 		samlCleanup()
 	}
 
-	// if cfg.SecurityConfig.KeysDir != "" {
-	// 	keyStore, err := tools.NewDirKeyStore(cfg.SecurityConfig.KeysDir)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	configuredSecurity.KeyStore = keyStore
-	// }
+	if cfg.SecurityConfig.KeysDir != "" {
+		keyStore, err := tools.NewDirKeyStore(cfg.SecurityConfig.KeysDir)
+		if err != nil {
+			return nil, err
+		}
+		configuredSecurity.KeyStore = keyStore
+	}
 
 	if cfg.SecurityConfig.JWTConfig != nil {
 		jwtSpec := &goa.JWTSecurity{
