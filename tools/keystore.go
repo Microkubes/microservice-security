@@ -61,7 +61,10 @@ func NewFileKeyStore(keyFiles map[string]string) (KeyStore, error) {
 	for keyName, keyFile := range keyFiles {
 		keyBytes, err := ioutil.ReadFile(keyFile)
 		if err != nil {
-			return nil, err
+			log.Print("Error")
+			log.Println(err)
+			// return nil, err
+			continue
 		}
 		privKey, err := jwtgo.ParseRSAPrivateKeyFromPEM(keyBytes)
 		if err != nil {
