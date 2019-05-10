@@ -61,7 +61,9 @@ func NewFileKeyStore(keyFiles map[string]string) (KeyStore, error) {
 	for keyName, keyFile := range keyFiles {
 		keyBytes, err := ioutil.ReadFile(keyFile)
 		if err != nil {
-			return nil, err
+			log.Println("Error reading key: ", err)
+			log.Println("Continuing on next key")
+			continue
 		}
 		privKey, err := jwtgo.ParseRSAPrivateKeyFromPEM(keyBytes)
 		if err != nil {
@@ -98,7 +100,7 @@ func NewDirKeyStore(keysDir string) (KeyStore, error) {
 	}
 	keysMap := map[string]string{}
 	for _, file := range files {
-		if !file.IsDir() {
+		if !file.Mode().IsDir() {
 			name := file.Name()
 			if suffix := hasAnySuffix(name, ".pub", ".pubk", ".pk", ".cert", ".crt", ".json", ".yaml", ".yml"); suffix == nil {
 				keysMap[name] = path.Join(keysDir, name)
