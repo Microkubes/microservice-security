@@ -59,6 +59,7 @@ func getCompiledRegex(values []string, startDelimiter byte, endDelimiter byte) (
 	compiled := []string{}
 
 	for _, value := range values {
+		value := value
 		compValue, err := compiler.CompileRegex(value, startDelimiter, endDelimiter)
 		if err != nil {
 			return nil, err
@@ -94,6 +95,7 @@ func toLadonPolicies(policyRecords []*db.PolicyRecord) (ladon.Policies, error) {
 	policies := []ladon.Policy{}
 
 	for _, record := range policyRecords {
+		record := record
 		policy, err := toLadonPolicy(record)
 		if err != nil {
 			return nil, err
@@ -192,6 +194,7 @@ func (m *BackendLadonManager) GetAll(limit, offset int64) (ladon.Policies, error
 	}
 
 	for _, mpr := range records {
+		mpr := mpr
 		policy, e := toLadonPolicy(mpr)
 		if e != nil {
 			return nil, e

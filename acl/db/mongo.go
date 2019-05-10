@@ -72,6 +72,7 @@ func (a *ACLSecurityMongoRepo) FindPolicies(filter map[string]string) ([]*Policy
 	}
 	policyRecords := []*PolicyRecord{}
 	for _, record := range results {
+		record := record
 		policyRecords = append(policyRecords, &record)
 	}
 	return policyRecords, nil
