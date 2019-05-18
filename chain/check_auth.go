@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Microkubes/microservice-security/auth"
-	"github.com/goadesign/goa"
+	"github.com/keitaroinc/goa"
 
 	"context"
 )

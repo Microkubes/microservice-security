@@ -16,8 +16,8 @@ import (
 
 	"github.com/Microkubes/microservice-security/auth"
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/goadesign/goa"
-	goajwt "github.com/goadesign/goa/middleware/security/jwt"
+	"github.com/keitaroinc/goa"
+	goajwt "github.com/keitaroinc/goa/middleware/security/jwt"
 )
 
 func TestJWTMiddleware(t *testing.T) {

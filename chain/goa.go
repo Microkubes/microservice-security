@@ -6,7 +6,7 @@ import (
 	"context"
 
 	"github.com/Microkubes/microservice-security/auth"
-	"github.com/goadesign/goa"
+	"github.com/keitaroinc/goa"
 )
 
 // BreakChainError is a custom error for breaking the middleware chain.

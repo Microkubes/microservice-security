@@ -9,7 +9,7 @@ import (
 	"github.com/Microkubes/microservice-security/auth"
 	"github.com/Microkubes/microservice-security/chain"
 	"github.com/Microkubes/microservice-tools/config"
-	"github.com/goadesign/goa"
+	"github.com/keitaroinc/goa"
 	"github.com/ory/ladon"
 )
 
