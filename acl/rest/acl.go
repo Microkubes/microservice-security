@@ -5,7 +5,7 @@ import (
 
 	"github.com/Microkubes/microservice-security/acl"
 	"github.com/Microkubes/microservice-security/acl/rest/app"
-	"github.com/goadesign/goa"
+	"github.com/keitaroinc/goa"
 	"github.com/ory/ladon"
 	uuid "github.com/satori/go.uuid"
 )

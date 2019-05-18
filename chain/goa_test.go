@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/Microkubes/microservice-security/auth"
-	"github.com/goadesign/goa"
+	"github.com/keitaroinc/goa"
 
 	"context"
 	"net/http/httptest"

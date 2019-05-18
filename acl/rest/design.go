@@ -1,8 +1,8 @@
 package rest
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
+	. "github.com/keitaroinc/goa/design"
+	. "github.com/keitaroinc/goa/design/apidsl"
 )
 
 var _ = API("acl-manager", func() {

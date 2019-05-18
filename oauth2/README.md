@@ -46,7 +46,7 @@ Create a security file app/security.go with the following content:
 package app
 
 import (
-	"github.com/goadesign/goa"
+	"github.com/keitaroinc/goa"
 )
 
 // NewOAuth2Security creates a OAuth2 security definition.

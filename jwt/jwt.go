@@ -13,8 +13,8 @@ import (
 	"github.com/Microkubes/microservice-security/chain"
 	"github.com/dgrijalva/jwt-go"
 	jwtgo "github.com/dgrijalva/jwt-go"
-	"github.com/goadesign/goa"
-	goajwt "github.com/goadesign/goa/middleware/security/jwt"
+	"github.com/keitaroinc/goa"
+	goajwt "github.com/keitaroinc/goa/middleware/security/jwt"
 )
 
 // JWTSecurityType is the name of the JWT security type

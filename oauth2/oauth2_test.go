@@ -16,10 +16,10 @@ import (
 	"testing"
 
 	"github.com/Microkubes/microservice-security/auth"
-	"github.com/goadesign/goa"
+	"github.com/keitaroinc/goa"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	goaJwt "github.com/goadesign/goa/middleware/security/jwt"
+	goaJwt "github.com/keitaroinc/goa/middleware/security/jwt"
 )
 
 var claims = jwt.MapClaims{

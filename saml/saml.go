@@ -24,7 +24,7 @@ import (
 	"github.com/crewjam/saml"
 	"github.com/crewjam/saml/samlsp"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/goadesign/goa"
+	"github.com/keitaroinc/goa"
 )
 
 const (

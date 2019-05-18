@@ -11,7 +11,7 @@ import (
 
 	"github.com/Microkubes/microservice-security/auth"
 	"github.com/Microkubes/microservice-security/chain"
-	"github.com/goadesign/goa"
+	"github.com/keitaroinc/goa"
 )
 
 // NoAuthenticationPresent is a custom error for the auth middleware generated

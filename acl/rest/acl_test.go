@@ -10,7 +10,7 @@ import (
 	"github.com/Microkubes/microservice-security/acl/rest/app"
 	"github.com/Microkubes/microservice-security/acl/rest/app/test"
 	"github.com/Microkubes/microservice-security/auth"
-	"github.com/goadesign/goa"
+	"github.com/keitaroinc/goa"
 	"github.com/ory/ladon"
 	uuid "github.com/satori/go.uuid"
 )

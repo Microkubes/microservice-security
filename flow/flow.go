@@ -19,7 +19,7 @@ import (
 	"github.com/Microkubes/microservice-security/saml"
 	"github.com/Microkubes/microservice-tools/config"
 	"github.com/crewjam/saml/samlsp"
-	"github.com/goadesign/goa"
+	"github.com/keitaroinc/goa"
 	"github.com/ory/ladon"
 )
 

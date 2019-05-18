@@ -21,8 +21,8 @@ import (
 	"net/url"
 
 	"github.com/Microkubes/microservice-security/acl/rest/app"
-	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/goatest"
+	"github.com/keitaroinc/goa"
+	"github.com/keitaroinc/goa/goatest"
 )
 
 // CreatePolicyAclBadRequest runs the method CreatePolicy of the given controller with the given parameters and payload.

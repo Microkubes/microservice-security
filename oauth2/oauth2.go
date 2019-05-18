@@ -12,8 +12,8 @@ import (
 	"github.com/Microkubes/microservice-security/chain"
 	jormungandrJwt "github.com/Microkubes/microservice-security/jwt"
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/goadesign/goa"
-	goaJwt "github.com/goadesign/goa/middleware/security/jwt"
+	"github.com/keitaroinc/goa"
+	goaJwt "github.com/keitaroinc/goa/middleware/security/jwt"
 
 	"crypto/ecdsa"
 	"crypto/rsa"
