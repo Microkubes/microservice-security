@@ -38,7 +38,7 @@ func TestGenerateReverseRegexpMatch(t *testing.T) {
 }
 
 func TestACLSecurityMongoRepoExtender(t *testing.T) {
-	origRepo := &backends.MongoCollection{}
+	origRepo := &backends.MongoSession{}
 
 	extended := ACLSecurityMongoRepoExtender(origRepo)
 
