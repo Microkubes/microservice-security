@@ -26,7 +26,7 @@ func reverseRegexpMatch(property, value string) string {
 
 // ACLSecurityMongoRepo extends the backends.Repository and implements ACLRepository.
 type ACLSecurityMongoRepo struct {
-	*backends.MongoCollection
+	*backends.MongoSession
 }
 
 // FindPolicies performs a lookup in the MongoDB to find policies that match the provided values for action, subject and/or resource.
@@ -65,7 +65,9 @@ func (a *ACLSecurityMongoRepo) FindPolicies(filter map[string]string) ([]*Policy
 		}
 	}
 
-	err := a.MongoCollection.Find(mongoFilter).All(&results)
+	session, collection := a.MongoSession.GetCollection()
+	defer session.Close()
+	err := collection.Find(mongoFilter).All(&results)
 
 	if err != nil {
 		return nil, err
@@ -80,12 +82,12 @@ func (a *ACLSecurityMongoRepo) FindPolicies(filter map[string]string) ([]*Policy
 
 // ACLSecurityMongoRepoExtender extends the incomping backends.Repository and wraps it in ACLSecurityMongoRepo.
 func ACLSecurityMongoRepoExtender(repo backends.Repository) backends.Repository {
-	mongoCollection, ok := repo.(*backends.MongoCollection)
+	mongoSession, ok := repo.(*backends.MongoSession)
 	if !ok {
 		log.Println("WARN: The incoming repository cannot be wrapped to an ACL Mongo repository because it is not of type *backends.MongoCollection.")
 		return repo
 	}
 	return &ACLSecurityMongoRepo{
-		MongoCollection: mongoCollection,
+		MongoSession: mongoSession,
 	}
 }
