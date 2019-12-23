@@ -120,7 +120,7 @@ func TestNewSAMLSecurityMiddleware(t *testing.T) {
 	claims := TokenClaims{}
 	claims.Audience = "http://localhost:8082/saml/metadata"
 	claims.Attributes = map[string][]string{
-		"uid": []string{"59a006ae0000000000000000"},
+		"uid":                    []string{"59a006ae0000000000000000"},
 		"eduPersonPrincipalName": []string{"test@example.org"},
 		"eduPersonAffiliation":   []string{"user, admin"},
 		"organizations":          []string{"Ozrg1, Org2"},
@@ -201,13 +201,13 @@ func TestNewSAMLSecurityMiddlewareExpiredToken(t *testing.T) {
 	req.AddCookie(&cookie)
 
 	ctx := context.Background()
-	modifiedCtx := ctx
+	// modifiedCtx := ctx
 	middleware := NewSAMLSecurityMiddleware(samlSP, samlConfig)
 	err := middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
 		// This handler is called AFTER the goa middleware executes.
 		// It modifies the context, writes the auth object to it
 		// We want to pass these modified versions back to our chain.
-		modifiedCtx = c
+		// modifiedCtx = c
 		return nil
 	})(ctx, rw, req)
 
@@ -248,13 +248,13 @@ func TestNewSAMLSecurityMiddlewareInvalidAudience(t *testing.T) {
 	req.AddCookie(&cookie)
 
 	ctx := context.Background()
-	modifiedCtx := ctx
+	// modifiedCtx := ctx
 	middleware := NewSAMLSecurityMiddleware(samlSP, samlConfig)
 	err := middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
 		// This handler is called AFTER the goa middleware executes.
 		// It modifies the context, writes the auth object to it
 		// We want to pass these modified versions back to our chain.
-		modifiedCtx = c
+		// modifiedCtx = c
 		return nil
 	})(ctx, rw, req)
 
@@ -283,13 +283,13 @@ func TestNewSAMLSecurityMiddlewareEmptyToken(t *testing.T) {
 	req.AddCookie(&cookie)
 
 	ctx := context.Background()
-	modifiedCtx := ctx
+	// modifiedCtx := ctx
 	middleware := NewSAMLSecurityMiddleware(samlSP, samlConfig)
 	err := middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
 		// This handler is called AFTER the goa middleware executes.
 		// It modifies the context, writes the auth object to it
 		// We want to pass these modified versions back to our chain.
-		modifiedCtx = c
+		// modifiedCtx = c
 		return nil
 	})(ctx, rw, req)
 
