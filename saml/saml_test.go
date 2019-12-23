@@ -201,13 +201,12 @@ func TestNewSAMLSecurityMiddlewareExpiredToken(t *testing.T) {
 	req.AddCookie(&cookie)
 
 	ctx := context.Background()
-	// modifiedCtx := ctx
 	middleware := NewSAMLSecurityMiddleware(samlSP, samlConfig)
 	err := middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
 		// This handler is called AFTER the goa middleware executes.
 		// It modifies the context, writes the auth object to it
 		// We want to pass these modified versions back to our chain.
-		// modifiedCtx = c
+
 		return nil
 	})(ctx, rw, req)
 
@@ -248,13 +247,12 @@ func TestNewSAMLSecurityMiddlewareInvalidAudience(t *testing.T) {
 	req.AddCookie(&cookie)
 
 	ctx := context.Background()
-	// modifiedCtx := ctx
 	middleware := NewSAMLSecurityMiddleware(samlSP, samlConfig)
 	err := middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
 		// This handler is called AFTER the goa middleware executes.
 		// It modifies the context, writes the auth object to it
 		// We want to pass these modified versions back to our chain.
-		// modifiedCtx = c
+
 		return nil
 	})(ctx, rw, req)
 
@@ -283,13 +281,12 @@ func TestNewSAMLSecurityMiddlewareEmptyToken(t *testing.T) {
 	req.AddCookie(&cookie)
 
 	ctx := context.Background()
-	// modifiedCtx := ctx
 	middleware := NewSAMLSecurityMiddleware(samlSP, samlConfig)
 	err := middleware(func(c context.Context, w http.ResponseWriter, r *http.Request) error {
 		// This handler is called AFTER the goa middleware executes.
 		// It modifies the context, writes the auth object to it
 		// We want to pass these modified versions back to our chain.
-		// modifiedCtx = c
+
 		return nil
 	})(ctx, rw, req)
 
