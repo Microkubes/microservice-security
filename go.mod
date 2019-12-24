@@ -1,6 +1,6 @@
 module github.com/Microkubes/microservice-security
 
-go 1.12
+go 1.13
 
 require (
 	github.com/Microkubes/backends v1.1.0
