@@ -8,8 +8,18 @@ import "golang.org/x/net/context"
 type Auth struct {
 	// UserID is the ID of the authenticated user.
 	UserID string `json:"userId,omitempty"`
-	// Username is the email of the authenticated user.
+
+	// CustomerID is the ID of the customer to which the authenticated user belongs.
+	CustomerID string `json:"customerID,omitempty"`
+
+	// Username is the username of the authenticated user.
 	Username string `json:"username,omitempty"`
+
+	// Fullname is the first name and surname of the authenticated user.
+	Fullname string `json:"fullname,omitempty"`
+
+	// Email is the email of the authenticated user.
+	Email string `json:"email,omitempty"`
 
 	// Roles is the list of roles that the user has claimed and have been authorized by the system.
 	Roles []string `json:"roles,omitempty"`
