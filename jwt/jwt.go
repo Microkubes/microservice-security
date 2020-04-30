@@ -42,41 +42,42 @@ func NewJWTSecurityMiddleware(resolver goajwt.KeyResolver, scheme *goa.JWTSecuri
 			jwtToken := goajwt.ContextJWT(ctx)
 			claims := jwtToken.Claims.(jwt.MapClaims)
 
-			if _, ok := claims["username"]; !ok {
-				return jwt.NewValidationError("Username is missing", jwt.ValidationErrorClaimsInvalid)
-			}
 			if _, ok := claims["userId"]; !ok {
 				return jwt.NewValidationError("User ID is missing", jwt.ValidationErrorClaimsInvalid)
 			}
-			roles := []string{}
-			organizations := []string{}
-			namespaces := []string{}
-			var username string
-			var userID string
-
-			username = claims["username"].(string)
-			if _, ok := claims["userId"].(string); !ok {
-				return jwt.NewValidationError("Invalid user ID", jwt.ValidationErrorClaimsInvalid)
-			}
-			userID = claims["userId"].(string)
-
-			if rolesStr, ok := claims["roles"]; ok {
-				roles = strings.Split(rolesStr.(string), ",")
-			}
-			if organizationsStr, ok := claims["organizations"]; ok {
-				organizations = strings.Split(organizationsStr.(string), ",")
-			}
-			if namespacesStr, ok := claims["namespaces"]; ok {
-				namespaces = strings.Split(namespacesStr.(string), ",")
-			}
 
 			authObj := &auth.Auth{
-				Roles:         roles,
-				Organizations: organizations,
-				Username:      username,
-				UserID:        userID,
-				Namespaces:    namespaces,
+				UserID: claims["userId"].(string),
 			}
+
+			if _, ok := claims["customerID"]; ok {
+				authObj.CustomerID = claims["customerID"].(string)
+			}
+
+			if _, ok := claims["username"]; ok {
+				authObj.Username = claims["username"].(string)
+			}
+
+			if _, ok := claims["fullname"]; ok {
+				authObj.Fullname = claims["fullname"].(string)
+			}
+
+			if _, ok := claims["email"]; ok {
+				authObj.Email = claims["email"].(string)
+			}
+
+			if rolesStr, ok := claims["roles"]; ok {
+				authObj.Roles = strings.Split(rolesStr.(string), ",")
+			}
+
+			if organizations, ok := claims["organizations"]; ok {
+				authObj.Organizations = strings.Split(organizations.(string), ",")
+			}
+
+			if namespaces, ok := claims["namespaces"]; ok {
+				authObj.Namespaces = strings.Split(namespaces.(string), ",")
+			}
+
 			return handler(auth.SetAuth(ctx, authObj), rw, req)
 		}
 	}, scheme)
