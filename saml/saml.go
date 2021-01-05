@@ -3,6 +3,7 @@ package saml
 import (
 	"bytes"
 	"context"
+
 	// "crypto/tls"
 
 	"crypto/x509"
@@ -79,14 +80,13 @@ func NewSAMLSecurityMiddleware(spMiddleware *samlsp.Middleware, samlConfig *conf
 				assertion, err := spMiddleware.ServiceProvider.ParseResponse(req, getPossibleRequestIDs(spMiddleware, req))
 				if err != nil {
 					if parseErr, ok := err.(*saml.InvalidResponseError); ok {
-						spMiddleware.ServiceProvider.Logger.Printf("RESPONSE: ===\n%s\n===\nNOW: %s\nERROR: %s",
-							parseErr.Response, parseErr.Now, parseErr.PrivateErr)
+						fmt.Printf("RESPONSE: ===\n%s\n===\nNOW: %s\nERROR: %s", parseErr.Response, parseErr.Now, parseErr.PrivateErr)
 					}
 					http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 					return goa.ErrInvalidRequest("Cannot parse SAML Response")
 				}
 
-				spMiddleware.Authorize(rw, req, assertion)
+				spMiddleware.CreateSessionFromAssertion(rw, req, assertion)
 				return chain.BreakChain("SAML ACS route not defined")
 			}
 
@@ -217,7 +217,7 @@ func getPossibleRequestIDs(spMiddleware *samlsp.Middleware, r *http.Request) []s
 		if !strings.HasPrefix(cookie.Name, "saml_") {
 			continue
 		}
-		spMiddleware.ServiceProvider.Logger.Printf("getPossibleRequestIDs: cookie: %s", cookie.String())
+		fmt.Printf("getPossibleRequestIDs: cookie: %s", cookie.String())
 
 		jwtParser := jwt.Parser{
 			ValidMethods: []string{jwtSigningMethod.Name},
@@ -227,7 +227,7 @@ func getPossibleRequestIDs(spMiddleware *samlsp.Middleware, r *http.Request) []s
 			return secretBlock, nil
 		})
 		if err != nil || !token.Valid {
-			spMiddleware.ServiceProvider.Logger.Printf("... invalid token %s", err)
+			fmt.Printf("... invalid token %s", err)
 			continue
 		}
 		claims := token.Claims.(jwt.MapClaims)
@@ -235,7 +235,7 @@ func getPossibleRequestIDs(spMiddleware *samlsp.Middleware, r *http.Request) []s
 	}
 
 	// If IDP initiated requests are allowed, then we can expect an empty response ID.
-	if spMiddleware.AllowIDPInitiated {
+	if spMiddleware.ServiceProvider.AllowIDPInitiated {
 		rv = append(rv, "")
 	}
 

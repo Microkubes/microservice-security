@@ -6,8 +6,10 @@ require (
 	github.com/Microkubes/backends v1.1.1
 	github.com/Microkubes/microservice-tools v1.1.0
 	github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5
+	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
+	github.com/alecthomas/units v0.0.0-20201120081800-1786d5ef83d4 // indirect
 	github.com/armon/go-metrics v0.3.0 // indirect
-	github.com/crewjam/saml v0.3.1
+	github.com/crewjam/saml v0.4.5
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598 // indirect
 	github.com/dimfeld/httptreemux v5.0.1+incompatible // indirect
@@ -18,10 +20,13 @@ require (
 	github.com/onsi/ginkgo v1.11.0 // indirect
 	github.com/onsi/gomega v1.8.1 // indirect
 	github.com/ory/ladon v1.0.2
+	github.com/prometheus/common v0.0.0-20181126121408-4724e9255275
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
+	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/zach-klippenstein/goregen v0.0.0-20160303162051-795b5e3961ea // indirect
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553
+	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
 	gopkg.in/h2non/gock.v1 v1.0.15
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 )
