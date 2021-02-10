@@ -10,7 +10,7 @@ type Auth struct {
 	UserID string `json:"userId,omitempty"`
 
 	// CustomerID is the ID of the customer to which the authenticated user belongs.
-	CustomerID string `json:"customerID,omitempty"`
+	CustomerID float64 `json:"customerID,omitempty"`
 
 	// Username is the username of the authenticated user.
 	Username string `json:"username,omitempty"`
