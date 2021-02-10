@@ -51,7 +51,7 @@ func NewJWTSecurityMiddleware(resolver goajwt.KeyResolver, scheme *goa.JWTSecuri
 			}
 
 			if _, ok := claims["customerID"]; ok {
-				authObj.CustomerID = claims["customerID"].(string)
+				authObj.CustomerID = claims["customerID"].(float64)
 			}
 
 			if _, ok := claims["username"]; ok {
