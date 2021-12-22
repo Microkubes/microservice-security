@@ -52,7 +52,7 @@ func newSAMLSecurity(gatewayURL string, conf *config.SAMLConfig) (chain.Security
 		return nil, nil, err
 	}
 
-	idpMetadataURL, err := url.Parse(fmt.Sprintf("%s/saml/idp/metadata", gatewayURL))
+	idpMetadataURL, err := url.Parse(fmt.Sprintf("%s/metadata", gatewayURL))
 	if err != nil {
 		return nil, nil, err
 	}

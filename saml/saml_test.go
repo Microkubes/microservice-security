@@ -404,7 +404,7 @@ func TestFindUser(t *testing.T) {
 
 func TestRegisterSP(t *testing.T) {
 	gock.New("http://127.0.0.1:8081").
-		Post("/saml/idp/services").
+		Post("/services").
 		Reply(201)
 
 	_, err := RegisterSP(samlSP, samlConfig)
@@ -415,7 +415,7 @@ func TestRegisterSP(t *testing.T) {
 
 func TestUnregisterSP(t *testing.T) {
 	gock.New("http://127.0.0.1:8081").
-		Delete("/saml/idp/services").
+		Delete("/services").
 		Reply(200)
 
 	UnregisterSP(samlSP, samlConfig)
