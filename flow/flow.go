@@ -123,17 +123,23 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 	}
 
 	if cfg.SecurityConfig.JWTConfig != nil {
-		jwtSpec := &goa.JWTSecurity{
-			Name:        "Authorization",
-			Description: cfg.JWTConfig.Description,
-			In:          goa.LocHeader,
-			Scopes: map[string]string{
-				"api:read":  "Read API resource",
-				"api:write": "Write API resource",
-			},
+		// jwtSpec := &goa.JWTSecurity{
+		// 	Name:        "Authorization",
+		// 	Description: cfg.JWTConfig.Description,
+		// 	In:          goa.LocHeader,
+		// 	Scopes: map[string]string{
+		// 		"api:read":  "Read API resource",
+		// 		"api:write": "Write API resource",
+		// 	},
+		// }
+		pk, err := configuredSecurity.KeyStore.GetPublicKey()
+		if err != nil {
+			return nil, err
 		}
-
-		jwtMiddleware := jwt.NewJWTSecurity(cfg.SecurityConfig.KeysDir, jwtSpec)
+		jwtMiddleware, err := jwt.NewJWTMiddleware(pk.(string))
+		if err != nil {
+			return nil, err
+		}
 		securityChain.AddMiddleware(jwtMiddleware)
 	}
 

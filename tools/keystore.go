@@ -20,12 +20,17 @@ type KeyStore interface {
 	GetPrivateKey() (interface{}, error)
 	// GetPrivateKeyByName gets a private key by name
 	GetPrivateKeyByName(keyName string) (interface{}, error)
+	// GetPublicKey gets the default public key used for signing.
+	GetPublicKey() (interface{}, error)
 }
 
 // FileKeyStore holds the data for a file-based KeyStore implementation.
 type FileKeyStore struct {
 	// PrivateKey is the default private key
 	PrivateKey interface{}
+
+	// PublicKey is the default public key
+	PublicKey interface{}
 
 	// KeysMap is a map <key-name>:<key-data>
 	KeysMap map[string]interface{}
@@ -37,7 +42,14 @@ func (fks *FileKeyStore) GetPrivateKey() (interface{}, error) {
 	if fks.PrivateKey != nil {
 		return fks.PrivateKey, nil
 	}
-	return nil, fmt.Errorf("No default key loaded")
+	return nil, fmt.Errorf("no default key loaded")
+}
+
+func (fks *FileKeyStore) GetPublicKey() (interface{}, error) {
+	if fks.PublicKey != nil {
+		return fks.PublicKey, nil
+	}
+	return nil, fmt.Errorf("no default public key loaded")
 }
 
 // GetPrivateKeyByName returns a private by by name. The key is looked up in the

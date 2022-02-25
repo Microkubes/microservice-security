@@ -2,11 +2,14 @@ package chain
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
 
 	"context"
+
+	"github.com/labstack/echo/v4"
 )
 
 // SecurityChainMiddleware is the basic constituent of the security chain. It acts as filter
@@ -21,6 +24,9 @@ import (
 // going to be called next.
 type SecurityChainMiddleware func(context.Context, http.ResponseWriter, *http.Request) (context.Context, http.ResponseWriter, error)
 
+// EchoMiddleware represents a single middleware function that will be part of a security chain.
+type EchoMiddleware func(next echo.HandlerFunc) echo.HandlerFunc
+
 // MiddlewareBuilder is a builder/factory for a particular SecurityChainMiddleware.
 // Returns a function of type SecurityChainMiddleware.
 type MiddlewareBuilder func() SecurityChainMiddleware
@@ -31,19 +37,19 @@ type MiddlewareBuilder func() SecurityChainMiddleware
 type SecurityChain interface {
 
 	// AddMiddleware adds new SecurityChainMiddleware to the end of the security chain.
-	AddMiddleware(middleware SecurityChainMiddleware) SecurityChain
+	AddMiddleware(middleware EchoMiddleware) SecurityChain
 
 	// AddMiddlewareType adds a middleware to the end of the chain. The actual SecurityChainMiddleware
 	// is build by calling the MiddlewareBuilder for the specific registered type of middleware.
 	// See NewSecurity function for registering MiddlewareBuilder for a specific security middleware.
-	AddMiddlewareType(middlewareType string) (SecurityChain, error)
+	// AddMiddlewareType(middlewareType string) (SecurityChain, error)
 
 	// Execute executes the security chain.
 	// It takes context.Context http.ResponseWriter and a pointer to http.Request as arguments.
 	// After executing all SecurityChainMiddleware in the chain, it returns the resulting context.Context,
 	// http.ResponseWriter and *http.Request. This may be different from the parameters passed to the function.
 	// If an error occurred during executing the chain, and error is returned.
-	Execute(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, *http.Request, error)
+	Execute(e *echo.Echo) *echo.Echo
 
 	// AddIgnorePattern adds a pattern for the request path that will be ignored by this chain.
 	// The request path will be matched against the ignore patterns and if match is found, then
@@ -60,43 +66,48 @@ type SecurityChain interface {
 
 // Chain represents a SecurityChain and holds a list of all SecurityChainMiddleware in the order as they are added.
 type Chain struct {
-	MiddlewareList     []SecurityChainMiddleware
+	MiddlewareFuncs    []EchoMiddleware
 	IgnorePatterns     []*regexp.Regexp
 	IgnoredHTTPMethods []string
 }
 
 // AddMiddleware appends a SecurityChainMiddleware to the end of middleware list in the chain.
-func (chain *Chain) AddMiddleware(middleware SecurityChainMiddleware) SecurityChain {
-	chain.MiddlewareList = append(chain.MiddlewareList, middleware)
-	return chain
+func (c *Chain) AddMiddleware(middleware EchoMiddleware) SecurityChain {
+	c.MiddlewareFuncs = append(c.MiddlewareFuncs, middleware)
+	return c
 }
 
 // AddMiddlewareType appends a SecurityChainMiddleware to the end of the middleware in the chain.
 // The SecurityChainMiddleware is build using MiddlewareBuilder factory.
 // If there is no MiddlewareBuilder registered for the specific type or an error occurs
 // while calling the builder, an error is returned.
-func (chain *Chain) AddMiddlewareType(middlewareType string) (SecurityChain, error) {
-	middleware, err := buildSecurityMiddleware(middlewareType)
-	if err != nil {
-		return nil, err
-	}
-	return chain.AddMiddleware(middleware), nil
-}
+// func (chain *Chain) AddMiddlewareType(middlewareType string) (SecurityChain, error) {
+// 	middleware, err := buildSecurityMiddleware(middlewareType)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return chain.AddMiddleware(middleware), nil
+// }
 
 // Execute executes the security chain by calling all SecurityChainMiddleware in the middleware list in the
 // order as they are added.
-func (chain *Chain) Execute(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, *http.Request, error) {
-	if !chain.preflightCheck(req) {
-		return ctx, rw, req, nil
+func (c *Chain) Execute(e *echo.Echo) *echo.Echo {
+	// if !chain.preflightCheck(req) {
+	// 	return ctx, rw, req, nil
+	// }
+	// var err error
+	// for _, middleware := range chain.MiddlewareList {
+	// 	ctx, rw, err = middleware(ctx, rw, req)
+	// 	if err != nil {
+	// 		return ctx, rw, req, err
+	// 	}
+	// }
+	// return ctx, rw, req, nil
+	for _, m := range c.MiddlewareFuncs {
+		log.Println("Im now executing ", m, " as part of the middleware chain")
+		e.Use(echo.MiddlewareFunc(m))
 	}
-	var err error
-	for _, middleware := range chain.MiddlewareList {
-		ctx, rw, err = middleware(ctx, rw, req)
-		if err != nil {
-			return ctx, rw, req, err
-		}
-	}
-	return ctx, rw, req, nil
+	return e
 }
 
 func (chain *Chain) isRequestIgnoredPattern(req *http.Request) bool {
@@ -193,9 +204,9 @@ func buildSecurityMiddleware(mechanismType string) (SecurityChainMiddleware, err
 
 // NewSecurityChain creates a new SecurityChain.
 func NewSecurityChain() SecurityChain {
-	var middlewareList []SecurityChainMiddleware
+	var middlewareList []EchoMiddleware
 	return &Chain{
-		MiddlewareList:     middlewareList,
+		MiddlewareFuncs:    middlewareList,
 		IgnorePatterns:     []*regexp.Regexp{},
 		IgnoredHTTPMethods: []string{},
 	}
@@ -203,9 +214,12 @@ func NewSecurityChain() SecurityChain {
 
 // AsSecurityMiddleware wraps a SecurityChain into a SecurityChainMiddleware which later
 // can be used as part of another SecurityChain.
-func AsSecurityMiddleware(chain SecurityChain) SecurityChainMiddleware {
-	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, error) {
-		c, rw, _, err := chain.Execute(ctx, rw, req)
-		return c, rw, err
-	}
-}
+// func AsSecurityMiddleware(chain SecurityChain) EchoMiddleware {
+// 	// return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) (context.Context, http.ResponseWriter, error) {
+// 	// 	c, rw, _, err := chain.Execute(ctx, rw, req)
+// 	// 	return c, rw, err
+// 	// }
+// 	return func(next echo.HandlerFunc) echo.HandlerFunc {
+// 		return chain.Execute()
+// 	}
+// }
