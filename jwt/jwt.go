@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"crypto/rsa"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -9,6 +8,7 @@ import (
 	"github.com/Microkubes/microservice-security/chain"
 	"github.com/dgrijalva/jwt-go"
 	jwtgo "github.com/dgrijalva/jwt-go"
+	goajwt "github.com/keitaroinc/goa/middleware/security/jwt"
 	em "github.com/labstack/echo/v4/middleware"
 )
 
@@ -18,13 +18,13 @@ const JWTSecurityType = "JWT"
 // NewKeyResolver creates a simple key resolver for the JWT middleware. It loads
 // the public keys from a specified directory (path). The public key files
 // MUST end in *.pub .
-// func NewKeyResolver(path string) (goajwt.KeyResolver, error) {
-// 	keys, err := LoadJWTPublicKeys(path)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return goajwt.NewSimpleResolver(keys), nil
-// }
+func NewKeyResolver(path string) (goajwt.KeyResolver, error) {
+	keys, err := LoadJWTPublicKeys(path)
+	if err != nil {
+		return nil, err
+	}
+	return goajwt.NewSimpleResolver(keys), nil
+}
 
 // NewJWTSecurityMiddleware creates a new chain.SecurityChainMiddleware with a given KeyResolver and
 // JWTSecurity configuration.
@@ -109,12 +109,12 @@ func NewJWTMiddleware(fp string) (chain.EchoMiddleware, error) {
 // }
 
 // LoadJWTPublicKeys loads PEM encoded RSA public keys used to validate and decrypt the JWT.
-func LoadJWTPublicKeys(path string) ([]*rsa.PublicKey, error) {
+func LoadJWTPublicKeys(path string) ([]goajwt.Key, error) {
 	keyFiles, err := filepath.Glob(fmt.Sprintf("%s/*.pub", path))
 	if err != nil {
 		return nil, err
 	}
-	keys := make([]*rsa.PublicKey, len(keyFiles))
+	keys := make([]goajwt.Key, len(keyFiles))
 	for i, keyFile := range keyFiles {
 		pem, err := ioutil.ReadFile(keyFile)
 		if err != nil {
