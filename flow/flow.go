@@ -15,11 +15,9 @@ import (
 	"github.com/Microkubes/microservice-security/auth"
 	"github.com/Microkubes/microservice-security/chain"
 	"github.com/Microkubes/microservice-security/jwt"
-	"github.com/Microkubes/microservice-security/oauth2"
 	"github.com/Microkubes/microservice-security/saml"
 	"github.com/Microkubes/microservice-tools/config"
 	"github.com/crewjam/saml/samlsp"
-	"github.com/keitaroinc/goa"
 	"github.com/ory/ladon"
 )
 
@@ -143,46 +141,46 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 		securityChain.AddMiddleware(jwtMiddleware)
 	}
 
-	if cfg.SecurityConfig.OAuth2Config != nil {
-		oauth2Spec := &goa.OAuth2Security{
-			AuthorizationURL: cfg.OAuth2Config.AuthorizationURL,
-			TokenURL:         cfg.OAuth2Config.TokenURL,
-			Flow:             "accessCode",
-			Description:      cfg.OAuth2Config.Description,
-			Scopes: map[string]string{
-				"api:read":  "Read API resource",
-				"api:write": "Write API resource",
-			},
-		}
+	// if cfg.SecurityConfig.OAuth2Config != nil {
+	// 	oauth2Spec := &goa.OAuth2Security{
+	// 		AuthorizationURL: cfg.OAuth2Config.AuthorizationURL,
+	// 		TokenURL:         cfg.OAuth2Config.TokenURL,
+	// 		Flow:             "accessCode",
+	// 		Description:      cfg.OAuth2Config.Description,
+	// 		Scopes: map[string]string{
+	// 			"api:read":  "Read API resource",
+	// 			"api:write": "Write API resource",
+	// 		},
+	// 	}
 
-		oauth2Middleware := oauth2.NewOAuth2Security(cfg.SecurityConfig.KeysDir, oauth2Spec)
-		securityChain.AddMiddleware(oauth2Middleware)
-	}
+	// 	oauth2Middleware := oauth2.NewOAuth2Security(cfg.SecurityConfig.KeysDir, oauth2Spec)
+	// 	securityChain.AddMiddleware(oauth2Middleware)
+	// }
 
-	if cfg.SecurityConfig.SAMLConfig != nil {
-		samlMiddleware, spMiddleware, err := newSAMLSecurity(cfg.GatewayURL, cfg.SAMLConfig)
-		if err != nil {
-			return nil, err
-		}
+	// if cfg.SecurityConfig.SAMLConfig != nil {
+	// 	samlMiddleware, spMiddleware, err := newSAMLSecurity(cfg.GatewayURL, cfg.SAMLConfig)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		sc, err := saml.RegisterSP(spMiddleware, cfg.SAMLConfig)
-		if err != nil {
-			return nil, err
-		}
-		samlCleanup = sc
+	// 	sc, err := saml.RegisterSP(spMiddleware, cfg.SAMLConfig)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	samlCleanup = sc
 
-		securityChain.AddMiddleware(samlMiddleware)
-	}
+	// 	securityChain.AddMiddleware(samlMiddleware)
+	// }
 
-	if cfg.SecurityConfig.JWTConfig == nil &&
-		cfg.SecurityConfig.OAuth2Config == nil &&
-		cfg.SecurityConfig.SAMLConfig == nil {
-		// No security defined
-		return configuredSecurity, nil
+	// if cfg.SecurityConfig.JWTConfig == nil &&
+	// 	cfg.SecurityConfig.OAuth2Config == nil &&
+	// 	cfg.SecurityConfig.SAMLConfig == nil {
+	// 	// No security defined
+	// 	return configuredSecurity, nil
 
-	}
+	// }
 
-	securityChain.AddMiddleware(chain.CheckAuth)
+	// securityChain.AddMiddleware(chain.CheckAuth)
 
 	if cfg.ACLConfig != nil && !cfg.ACLConfig.Disable {
 		manager, mc, err := acl.NewBackendLadonManager(&cfg.DBConfig)
@@ -204,35 +202,35 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 			return nil, err
 		}
 
-		if cfg.ACLConfig.Policies != nil {
-			for _, policy := range cfg.ACLConfig.Policies {
-				ladonPolicy := &ladon.DefaultPolicy{
-					ID:          policy.ID,
-					Actions:     policy.Actions,
-					Description: policy.Description,
-					Effect:      policy.Effect,
-					Resources:   policy.Resources,
-					Subjects:    policy.Subjects,
-				}
-				if policy.Conditions != nil {
-					conditions, e := conditionsFromConfig(policy.Conditions)
-					if e != nil {
-						return nil, e
-					}
-					ladonPolicy.Conditions = conditions
-				}
-				e := addOrUpdatePolicy(ladonPolicy, manager)
-				if e != nil {
-					return nil, e
-				}
-			}
-		}
+		// if cfg.ACLConfig.Policies != nil {
+		// 	for _, policy := range cfg.ACLConfig.Policies {
+		// 		ladonPolicy := &ladon.DefaultPolicy{
+		// 			ID:          policy.ID,
+		// 			Actions:     policy.Actions,
+		// 			Description: policy.Description,
+		// 			Effect:      policy.Effect,
+		// 			Resources:   policy.Resources,
+		// 			Subjects:    policy.Subjects,
+		// 		}
+		// 		if policy.Conditions != nil {
+		// 			conditions, e := conditionsFromConfig(policy.Conditions)
+		// 			if e != nil {
+		// 				return nil, e
+		// 			}
+		// 			ladonPolicy.Conditions = conditions
+		// 		}
+		// 		e := addOrUpdatePolicy(ladonPolicy, manager)
+		// 		if e != nil {
+		// 			return nil, e
+		// 		}
+		// 	}
+		// }
 
-		aclMiddleware, err := acl.NewACLMiddleware(manager)
-		if err != nil {
-			return nil, err
-		}
-		securityChain.AddMiddleware(aclMiddleware)
+		// aclMiddleware, err := acl.NewACLMiddleware(manager)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// securityChain.AddMiddleware(aclMiddleware)
 		configuredSecurity.ACLManager = manager
 	}
 
