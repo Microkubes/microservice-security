@@ -68,8 +68,10 @@ github.com/jonboulle/clockwork v0.2.1 h1:S/EaQvW6FpWMYAvYvY+OBDvpaM+izu0oiwo5y0M
 github.com/jonboulle/clockwork v0.2.1/go.mod h1:Pkfl5aHPm1nk2H9h0bjmnJD/BcgbGXUBGnn1kMkgxc8=
 github.com/jtolds/gls v4.20.0+incompatible h1:xdiiI2gbIgH/gLH7ADydsJ1uDOEzR8yvV7C0MuV77Wo=
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=
-github.com/k0kubun/pp/v3 v3.1.0 h1:ifxtqJkRZhw3h554/z/8zm6AAbyO4LLKDlA5eV+9O8Q=
-github.com/k0kubun/pp/v3 v3.1.0/go.mod h1:vIrP5CF0n78pKHm2Ku6GVerpZBJvscg48WepUYEk2gw=
+github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 h1:uC1QfSlInpQF+M0ao65imhwqKnz3Q2z/d8PWZRMQvDM=
+github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88/go.mod h1:3w7q1U84EfirKl04SVQ/s7nPm1ZPhiXd34z40TNz36k=
+github.com/k0kubun/pp v3.0.1+incompatible h1:3tqvf7QgUnZ5tXO6pNAZlrvHgl6DvifjDrd9g2S9Z40=
+github.com/k0kubun/pp v3.0.1+incompatible/go.mod h1:GWse8YhT0p8pT4ir3ZgBbfZild3tgzSScAn6HmfYukg=
 github.com/keitaroinc/goa v1.5.0 h1:vhD9CBtpCNy3eYxdQtTHzyrJIQ1kPAr5sl715oRMvwM=
 github.com/keitaroinc/goa v1.5.0/go.mod h1:/2wU1ZNwnOGEs2McuC3BMK59BD0nTRmZ2Uy61h/uuZY=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
@@ -88,7 +90,6 @@ github.com/manveru/gobdd v0.0.0-20131210092515-f1a17fdd710b h1:3E44bLeN8uKYdfQqV
 github.com/manveru/gobdd v0.0.0-20131210092515-f1a17fdd710b/go.mod h1:Bj8LjjP0ReT1eKt5QlKjwgi5AFm5mI6O1A2G4ChI0Ag=
 github.com/mattermost/xml-roundtrip-validator v0.0.0-20201213122252-bcd7e1b9601e h1:qqXczln0qwkVGcpQ+sQuPOVntt2FytYarXXxYSNJkgw=
 github.com/mattermost/xml-roundtrip-validator v0.0.0-20201213122252-bcd7e1b9601e/go.mod h1:qccnGMcpgwcNaBnxqpJpWWUiPNr5H3O8eDgGV9gT5To=
-github.com/mattn/go-colorable v0.1.11 h1:nQ+aFkoE2TMGc0b68U2OKSexC+eq46+XwZzWXHRmPYs=
 github.com/mattn/go-colorable v0.1.11/go.mod h1:u5H1YNBxpqRaxsYJYSkiCWKzEfiAb1Gb520KVy5xxl4=
 github.com/mattn/go-colorable v0.1.12 h1:jF+Du6AlPIjs2BiUiQlKOX0rt3SujHxPnksPKZbaA40=
 github.com/mattn/go-colorable v0.1.12/go.mod h1:u5H1YNBxpqRaxsYJYSkiCWKzEfiAb1Gb520KVy5xxl4=

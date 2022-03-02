@@ -98,8 +98,14 @@ func NewJWTMiddleware(fp string) (chain.EchoMiddleware, error) {
 		SigningMethod: "RS256",
 		TokenLookup:   "header:authorization",
 		ParseTokenFunc: func(auth string, c echo.Context) (interface{}, error) {
-			fmt.Println("this is the auth ", auth)
-			pp.Println("and this is the contextg ", c)
+			claims := jwt.MapClaims{}
+			_, err := jwt.ParseWithClaims(auth, claims, func(t *jwt.Token) (interface{}, error) {
+				return []byte(pubKey), nil
+			})
+			if err != nil {
+				return nil, err
+			}
+			pp.Println(claims)
 			return nil, nil
 		},
 	})), nil
