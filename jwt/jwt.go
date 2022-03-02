@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -138,7 +137,6 @@ func NewJWTMiddleware(fp string) (chain.EchoMiddleware, error) {
 				authObj.Namespaces = strings.Split(namespaces.(string), ",")
 			}
 			c.Set("userInfo", authObj)
-			auth.SetAuth(c.(context.Context), authObj)
 		},
 	})), nil
 }
