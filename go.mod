@@ -12,6 +12,7 @@ require (
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598 // indirect
 	github.com/dimfeld/httptreemux v5.0.1+incompatible // indirect
 	github.com/google/gxui v0.0.0-20151028112939-f85e0a97b3a4 // indirect
+	github.com/k0kubun/pp/v3 v3.1.0 // indirect
 	github.com/keitaroinc/goa v1.5.0
 	github.com/labstack/echo/v4 v4.6.3
 	github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d // indirect

@@ -8,7 +8,9 @@ import (
 	"github.com/Microkubes/microservice-security/chain"
 	"github.com/dgrijalva/jwt-go"
 	jwtgo "github.com/dgrijalva/jwt-go"
+	"github.com/k0kubun/pp"
 	goajwt "github.com/keitaroinc/goa/middleware/security/jwt"
+	"github.com/labstack/echo/v4"
 	em "github.com/labstack/echo/v4/middleware"
 )
 
@@ -89,11 +91,17 @@ func NewJWTMiddleware(fp string) (chain.EchoMiddleware, error) {
 	if err != nil {
 		return nil, err
 	}
+	// After validating the token set Auth object in claims
 	return chain.EchoMiddleware(em.JWTWithConfig(em.JWTConfig{
 		ContextKey:    "user",
 		SigningKey:    rsaKey,
 		SigningMethod: "RS256",
 		TokenLookup:   "header:authorization",
+		ParseTokenFunc: func(auth string, c echo.Context) (interface{}, error) {
+			fmt.Println("this is the auth ", auth)
+			pp.Println("and this is the contextg ", c)
+			return nil, nil
+		},
 	})), nil
 }
 
