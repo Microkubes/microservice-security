@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/Microkubes/microservice-security/chain"
-	"github.com/dgrijalva/jwt-go"
 	jwtgo "github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/k0kubun/pp"
 	goajwt "github.com/keitaroinc/goa/middleware/security/jwt"
 	"github.com/labstack/echo/v4"
