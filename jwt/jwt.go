@@ -1,14 +1,16 @@
 package jwt
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
+	"github.com/Microkubes/microservice-security/auth"
 	"github.com/Microkubes/microservice-security/chain"
 	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/golang-jwt/jwt"
-	"github.com/k0kubun/pp"
 	goajwt "github.com/keitaroinc/goa/middleware/security/jwt"
 	"github.com/labstack/echo/v4"
 	em "github.com/labstack/echo/v4/middleware"
@@ -98,7 +100,45 @@ func NewJWTMiddleware(fp string) (chain.EchoMiddleware, error) {
 		SigningMethod: "RS256",
 		TokenLookup:   "header:authorization",
 		SuccessHandler: func(c echo.Context) {
-			pp.Println(c.Get("user").(*jwt.Token))
+			token := c.Get("user").(*jwt.Token)
+			claims := token.Claims.(jwt.MapClaims)
+			if _, ok := claims["userId"]; !ok {
+				c.JSON(400, "user id is missing from the claims")
+				return
+			}
+			authObj := &auth.Auth{
+				UserID: claims["userId"].(string),
+			}
+
+			if _, ok := claims["customerID"]; ok {
+				authObj.CustomerID = claims["customerID"].(float64)
+			}
+
+			if _, ok := claims["username"]; ok {
+				authObj.Username = claims["username"].(string)
+			}
+
+			if _, ok := claims["fullname"]; ok {
+				authObj.Fullname = claims["fullname"].(string)
+			}
+
+			if _, ok := claims["email"]; ok {
+				authObj.Email = claims["email"].(string)
+			}
+
+			if rolesStr, ok := claims["roles"]; ok {
+				authObj.Roles = strings.Split(rolesStr.(string), ",")
+			}
+
+			if organizations, ok := claims["organizations"]; ok {
+				authObj.Organizations = strings.Split(organizations.(string), ",")
+			}
+
+			if namespaces, ok := claims["namespaces"]; ok {
+				authObj.Namespaces = strings.Split(namespaces.(string), ",")
+			}
+			c.Set("userInfo", authObj)
+			auth.SetAuth(c.(context.Context), authObj)
 		},
 	})), nil
 }
