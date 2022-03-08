@@ -188,7 +188,7 @@ func TestJWTMiddleware(t *testing.T) {
 	req.Header.Set("authorization", "bearer "+token+"invalid")
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
-	assert.Equal(t, http.StatusUnauthorized, rec.Code, "error validating invalid token")
+	assert.Equal(t, http.StatusUnauthorized, rec.Code, "error verifying invalid token")
 }
 
 // func TestNewJWTSecurity(t *testing.T) {
