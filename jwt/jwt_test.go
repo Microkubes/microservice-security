@@ -14,7 +14,6 @@ import (
 
 	"github.com/Microkubes/microservice-security/chain"
 	"github.com/golang-jwt/jwt"
-	goajwt "github.com/keitaroinc/goa/middleware/security/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -62,17 +61,17 @@ func generateRSAKeyPair() (*rsa.PrivateKey, error) {
 	return rsa.GenerateKey(rand.Reader, 2048)
 }
 
-func newResolverAndKey() (*goajwt.KeyResolver, *rsa.PrivateKey, error) {
-	key, err := generateRSAKeyPair()
-	if err != nil {
-		return nil, nil, err
-	}
-	keys := []goajwt.Key{}
-	keys = append(keys, &key.PublicKey)
-	println(len(keys))
-	resolver := goajwt.NewSimpleResolver(keys)
-	return &resolver, key, nil
-}
+// func newResolverAndKey() (*goajwt.KeyResolver, *rsa.PrivateKey, error) {
+// 	key, err := generateRSAKeyPair()
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+// 	keys := []goajwt.Key{}
+// 	keys = append(keys, &key.PublicKey)
+// 	println(len(keys))
+// 	resolver := goajwt.NewSimpleResolver(keys)
+// 	return &resolver, key, nil
+// }
 
 func generateRSAKeyPairInDir(dir string, keyFileName string) error {
 	keyPair, err := generateRSAKeyPair()
