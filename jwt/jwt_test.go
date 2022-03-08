@@ -158,25 +158,31 @@ func TestJWTMiddleware(t *testing.T) {
 	keysDir, err := ioutil.TempDir("", "keys")
 	assert.NoError(t, err, "error creating temp keys dir")
 	defer os.RemoveAll(keysDir)
+
 	err = generateRSAKeyPairInDir(keysDir, "test_key")
 	assert.NoError(t, err, "error genererating key pair")
+
 	privKey, err := ioutil.ReadFile(fmt.Sprintf("%s/test_key", keysDir))
 	assert.NoError(t, err, "error reading private key")
+
 	ch := chain.Chain{}
 	signKey, err := jwt.ParseRSAPrivateKeyFromPEM(privKey)
 	assert.NoError(t, err, "error parsing signing key")
+
 	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(signKey)
 	assert.NoError(t, err, "error signing jwt token")
+
 	jwt, err := NewJWTMiddleware(fmt.Sprintf("%s/test_key.pub", keysDir))
 	assert.NoError(t, err, "error creating jwt middleware")
+
 	ch.MiddlewareFuncs = append(ch.MiddlewareFuncs, jwt)
 	ch.Execute(e)
 	req, err := http.NewRequest(http.MethodGet, "/", nil)
 	assert.NoError(t, err, "error creating request")
+
 	req.Header.Set("authorization", "bearer "+token)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
-
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	req.Header.Set("authorization", "bearer "+token+"invalid")
