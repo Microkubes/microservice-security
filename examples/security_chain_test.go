@@ -1,11 +1,11 @@
 package examples
 
-import "testing"
+// import "testing"
 
-func TestFullSecurityChain(t *testing.T) {
-	SecurityChainExample()
-}
+// func TestFullSecurityChain(t *testing.T) {
+// 	SecurityChainExample()
+// }
 
-func TestFullSecurityChainWrongAuth(t *testing.T) {
-	SecurityChainExampleFailAuth()
-}
+// func TestFullSecurityChainWrongAuth(t *testing.T) {
+// 	SecurityChainExampleFailAuth()
+// }

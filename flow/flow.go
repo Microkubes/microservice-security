@@ -1,13 +1,8 @@
 package flow
 
 import (
-	"crypto/rsa"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
-	"fmt"
 	"log"
-	"net/url"
 
 	"github.com/Microkubes/microservice-security/tools"
 
@@ -15,9 +10,7 @@ import (
 	"github.com/Microkubes/microservice-security/auth"
 	"github.com/Microkubes/microservice-security/chain"
 	"github.com/Microkubes/microservice-security/jwt"
-	"github.com/Microkubes/microservice-security/saml"
 	"github.com/Microkubes/microservice-tools/config"
-	"github.com/crewjam/saml/samlsp"
 	"github.com/ory/ladon"
 )
 
@@ -34,38 +27,38 @@ type ConfiguredSecurity struct {
 	Cleanup    CleanupFn
 }
 
-func newSAMLSecurity(gatewayURL string, conf *config.SAMLConfig) (chain.SecurityChainMiddleware, *samlsp.Middleware, error) {
-	keyPair, err := tls.LoadX509KeyPair(conf.CertFile, conf.KeyFile)
-	if err != nil {
-		return nil, nil, err
-	}
+// func newSAMLSecurity(gatewayURL string, conf *config.SAMLConfig) (chain.SecurityChainMiddleware, *samlsp.Middleware, error) {
+// 	keyPair, err := tls.LoadX509KeyPair(conf.CertFile, conf.KeyFile)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
 
-	keyPair.Leaf, err = x509.ParseCertificate(keyPair.Certificate[0])
-	if err != nil {
-		return nil, nil, err
-	}
+// 	keyPair.Leaf, err = x509.ParseCertificate(keyPair.Certificate[0])
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
 
-	rootURL, err := url.Parse(fmt.Sprintf("%s", conf.RootURL))
-	if err != nil {
-		return nil, nil, err
-	}
+// 	rootURL, err := url.Parse(fmt.Sprintf("%s", conf.RootURL))
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
 
-	idpMetadataURL, err := url.Parse(fmt.Sprintf("%s/saml/idp/metadata", gatewayURL))
-	if err != nil {
-		return nil, nil, err
-	}
+// 	idpMetadataURL, err := url.Parse(fmt.Sprintf("%s/saml/idp/metadata", gatewayURL))
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
 
-	samlSP, err := samlsp.New(samlsp.Options{
-		IDPMetadataURL: idpMetadataURL,
-		URL:            *rootURL,
-		Key:            keyPair.PrivateKey.(*rsa.PrivateKey),
-		Certificate:    keyPair.Leaf,
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-	return saml.NewSAMLSecurity(samlSP, conf), samlSP, nil
-}
+// 	samlSP, err := samlsp.New(samlsp.Options{
+// 		IDPMetadataURL: idpMetadataURL,
+// 		URL:            *rootURL,
+// 		Key:            keyPair.PrivateKey.(*rsa.PrivateKey),
+// 		Certificate:    keyPair.Leaf,
+// 	})
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+// 	return saml.NewSAMLSecurity(samlSP, conf), samlSP, nil
+// }
 
 // NewSecurityFromConfig sets up a full security chain from a a given service configuration.
 func NewSecurityFromConfig(cfg *config.ServiceConfig) (chain.SecurityChain, CleanupFn, error) {
