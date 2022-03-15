@@ -8,8 +8,8 @@ import (
 
 	"github.com/Microkubes/microservice-security/auth"
 	"github.com/Microkubes/microservice-security/chain"
+	"github.com/Microkubes/microservice-security/jwt"
 	"github.com/Microkubes/microservice-security/pkg/acl"
-	"github.com/Microkubes/microservice-security/pkg/jwt"
 	"github.com/Microkubes/microservice-tools/config"
 	"github.com/ory/ladon"
 )
