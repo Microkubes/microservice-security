@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/Microkubes/microservice-security/acl"
 	"github.com/Microkubes/microservice-security/acl/rest/app"

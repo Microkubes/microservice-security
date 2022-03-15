@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/Microkubes/backends"
 	"github.com/Microkubes/microservice-tools/config"

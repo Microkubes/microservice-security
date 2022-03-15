@@ -12,7 +12,7 @@ import (
 
 	"net/http/httptest"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/Microkubes/microservice-security/auth"
 	jwt "github.com/dgrijalva/jwt-go"
