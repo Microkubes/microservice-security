@@ -153,13 +153,13 @@ func NewJWTMiddleware(fp string) (chain.EchoMiddleware, error) {
 // }
 
 // LoadJWTPublicKeys loads PEM encoded RSA public keys used to validate and decrypt the JWT.
-func LoadJWTPublicKeys(path string) ([]*rsa.PublicKey, error) {
+func LoadJWTPublicKeys(path string) (map[string]*rsa.PublicKey, error) {
 	keyFiles, err := filepath.Glob(fmt.Sprintf("%s/*.pub", path))
 	if err != nil {
 		return nil, err
 	}
-	keys := make([]*rsa.PublicKey, len(keyFiles))
-	for i, keyFile := range keyFiles {
+	keys := make(map[string]*rsa.PublicKey, 0)
+	for _, keyFile := range keyFiles {
 		pem, err := ioutil.ReadFile(keyFile)
 		if err != nil {
 			return nil, err
@@ -168,11 +168,11 @@ func LoadJWTPublicKeys(path string) ([]*rsa.PublicKey, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to load key %s: %s", keyFile, err)
 		}
-		keys[i] = key
+		keys[keyFile] = key
 	}
 	if len(keys) == 0 {
 		return nil, fmt.Errorf("couldn't load public keys for JWT security")
 	}
-
+	fmt.Println("the keys before return ", keys)
 	return keys, nil
 }
