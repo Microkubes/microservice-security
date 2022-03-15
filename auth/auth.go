@@ -2,7 +2,7 @@
 // for accessing and setting the Auth object in provided context.Context.
 package auth
 
-import "golang.org/x/net/context"
+import "context"
 
 // Auth stores the Authorization and Authentication data for a particular user/client.
 type Auth struct {
