@@ -6,10 +6,10 @@ import (
 
 	"github.com/Microkubes/microservice-security/tools"
 
-	"github.com/Microkubes/microservice-security/acl"
 	"github.com/Microkubes/microservice-security/auth"
 	"github.com/Microkubes/microservice-security/chain"
-	"github.com/Microkubes/microservice-security/jwt"
+	"github.com/Microkubes/microservice-security/pkg/acl"
+	"github.com/Microkubes/microservice-security/pkg/jwt"
 	"github.com/Microkubes/microservice-tools/config"
 	"github.com/ory/ladon"
 )
@@ -195,35 +195,35 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 			return nil, err
 		}
 
-		// if cfg.ACLConfig.Policies != nil {
-		// 	for _, policy := range cfg.ACLConfig.Policies {
-		// 		ladonPolicy := &ladon.DefaultPolicy{
-		// 			ID:          policy.ID,
-		// 			Actions:     policy.Actions,
-		// 			Description: policy.Description,
-		// 			Effect:      policy.Effect,
-		// 			Resources:   policy.Resources,
-		// 			Subjects:    policy.Subjects,
-		// 		}
-		// 		if policy.Conditions != nil {
-		// 			conditions, e := conditionsFromConfig(policy.Conditions)
-		// 			if e != nil {
-		// 				return nil, e
-		// 			}
-		// 			ladonPolicy.Conditions = conditions
-		// 		}
-		// 		e := addOrUpdatePolicy(ladonPolicy, manager)
-		// 		if e != nil {
-		// 			return nil, e
-		// 		}
-		// 	}
-		// }
+		if cfg.ACLConfig.Policies != nil {
+			for _, policy := range cfg.ACLConfig.Policies {
+				ladonPolicy := &ladon.DefaultPolicy{
+					ID:          policy.ID,
+					Actions:     policy.Actions,
+					Description: policy.Description,
+					Effect:      policy.Effect,
+					Resources:   policy.Resources,
+					Subjects:    policy.Subjects,
+				}
+				if policy.Conditions != nil {
+					conditions, e := conditionsFromConfig(policy.Conditions)
+					if e != nil {
+						return nil, e
+					}
+					ladonPolicy.Conditions = conditions
+				}
+				e := addOrUpdatePolicy(ladonPolicy, manager)
+				if e != nil {
+					return nil, e
+				}
+			}
+		}
 
-		// aclMiddleware, err := acl.NewACLMiddleware(manager)
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// securityChain.AddMiddleware(aclMiddleware)
+		aclMiddleware, err := acl.NewACLMiddleware(manager)
+		if err != nil {
+			return nil, err
+		}
+		securityChain.AddMiddleware(aclMiddleware)
 		configuredSecurity.ACLManager = manager
 	}
 
