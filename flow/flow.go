@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 
+	"github.com/Microkubes/microservice-security/jwt"
 	"github.com/Microkubes/microservice-security/tools"
 
 	"github.com/Microkubes/microservice-security/auth"
@@ -122,15 +123,15 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 		// 		"api:write": "Write API resource",
 		// 	},
 		// }
-		// pk, err := configuredSecurity.KeyStore.GetPublicKey()
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// jwtMiddleware, err := jwt.NewJWTMiddleware(pk.(string))
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// securityChain.AddMiddleware(jwtMiddleware)
+		pks, err := jwt.LoadJWTPublicKeys(cfg.KeysDir)
+		if err != nil {
+			return nil, err
+		}
+		jwtMiddleware, err := jwt.NewJWTMiddleware(pks["default"])
+		if err != nil {
+			return nil, err
+		}
+		securityChain.AddMiddleware(jwtMiddleware)
 	}
 
 	// if cfg.SecurityConfig.OAuth2Config != nil {
