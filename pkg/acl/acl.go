@@ -48,6 +48,8 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 				Subject:  authObj.Username,
 				Context:  aclContext,
 			}
+			pp.Println("THE ACL REQ ", aclRequest)
+			pp.Println("THE WARDEN RES ", warden.IsAllowed(&aclRequest))
 			if err := warden.IsAllowed(&aclRequest); err != nil {
 				return c.JSON(403, "you don't have permissions to execute this action")
 			}
