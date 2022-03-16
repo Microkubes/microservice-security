@@ -171,7 +171,9 @@ func TestJWTMiddleware(t *testing.T) {
 	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(signKey)
 	assert.NoError(t, err, "error signing jwt token")
 
-	jwt, err := NewJWTMiddleware(fmt.Sprintf("%s/test_key.pub", keysDir))
+	pks, err := LoadJWTPublicKeys(keysDir)
+	assert.NoError(t, err, "error loading public keys")
+	jwt, err := NewJWTMiddleware(pks["test_key"])
 	assert.NoError(t, err, "error creating jwt middleware")
 
 	ch.MiddlewareFuncs = append(ch.MiddlewareFuncs, jwt)

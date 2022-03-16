@@ -168,13 +168,12 @@ func LoadJWTPublicKeys(path string) (map[string]*rsa.PublicKey, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to load key %s: %s", keyFile, err)
 		}
-		fn := strings.Split(keyFile, "/")[3]
+		fn := filepath.Base(keyFile)
 		name := strings.Split(fn, ".")[0]
 		keys[name] = key
 	}
 	if len(keys) == 0 {
 		return nil, fmt.Errorf("couldn't load public keys for JWT security")
 	}
-	fmt.Println("the keys before return ", keys)
 	return keys, nil
 }
