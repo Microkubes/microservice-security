@@ -8,7 +8,6 @@ import (
 
 	"github.com/Microkubes/microservice-security/auth"
 	"github.com/Microkubes/microservice-security/chain"
-	"github.com/Microkubes/microservice-security/jwt"
 	"github.com/Microkubes/microservice-security/pkg/acl"
 	"github.com/Microkubes/microservice-tools/config"
 	"github.com/ory/ladon"
@@ -123,15 +122,15 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 		// 		"api:write": "Write API resource",
 		// 	},
 		// }
-		pk, err := configuredSecurity.KeyStore.GetPublicKey()
-		if err != nil {
-			return nil, err
-		}
-		jwtMiddleware, err := jwt.NewJWTMiddleware(pk.(string))
-		if err != nil {
-			return nil, err
-		}
-		securityChain.AddMiddleware(jwtMiddleware)
+		// pk, err := configuredSecurity.KeyStore.GetPublicKey()
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// jwtMiddleware, err := jwt.NewJWTMiddleware(pk.(string))
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// securityChain.AddMiddleware(jwtMiddleware)
 	}
 
 	// if cfg.SecurityConfig.OAuth2Config != nil {

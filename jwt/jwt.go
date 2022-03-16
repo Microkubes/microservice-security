@@ -83,15 +83,15 @@ const JWTSecurityType = "JWT"
 // }
 
 // NewJWTMiddleware
-func NewJWTMiddleware(fp string) (chain.EchoMiddleware, error) {
-	pubKey, err := ioutil.ReadFile(fp)
-	if err != nil {
-		return nil, err
-	}
-	rsaKey, err := jwt.ParseRSAPublicKeyFromPEM(pubKey)
-	if err != nil {
-		return nil, err
-	}
+func NewJWTMiddleware(rsaKey *rsa.PublicKey) (chain.EchoMiddleware, error) {
+	// pubKey, err := ioutil.ReadFile(fp)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// rsaKey, err := jwt.ParseRSAPublicKeyFromPEM(pubKey)
+	// if err != nil {
+	// 	return nil, err
+	// }
 	// After validating the token set Auth object in claims
 	return chain.EchoMiddleware(em.JWTWithConfig(em.JWTConfig{
 		ContextKey:    "user",
