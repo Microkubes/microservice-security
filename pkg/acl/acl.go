@@ -6,7 +6,6 @@ import (
 	"github.com/Microkubes/microservice-security/auth"
 	"github.com/Microkubes/microservice-security/chain"
 	"github.com/Microkubes/microservice-tools/config"
-	"github.com/k0kubun/pp"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/ladon"
 )
@@ -35,7 +34,6 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 			if authObj == nil {
 				return c.JSON(400, "auth object is missing")
 			}
-			pp.Println("the auth obj ", authObj)
 			aclContext := ladon.Context{
 				"roles":         authObj.Roles,
 				"organizations": authObj.Organizations,
@@ -48,10 +46,8 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 				Subject:  authObj.Username,
 				Context:  aclContext,
 			}
-			pp.Println("THE ACL REQ ", aclRequest)
-			pp.Println("THE WARDEN RES ", warden.IsAllowed(&aclRequest))
 			if err := warden.IsAllowed(&aclRequest); err != nil {
-				return c.JSON(403, "you don't have permissions to execute this action")
+				return c.JSON(403, err)
 			}
 			return nil
 		}

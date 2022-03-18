@@ -125,10 +125,12 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 		// }
 		pks, err := jwt.LoadJWTPublicKeys(cfg.KeysDir)
 		if err != nil {
+			log.Panicln("pks err ", err)
 			return nil, err
 		}
 		jwtMiddleware, err := jwt.NewJWTMiddleware(pks["default"])
 		if err != nil {
+			log.Panicln("jwt err ", err)
 			return nil, err
 		}
 		securityChain.AddMiddleware(jwtMiddleware)
@@ -178,6 +180,7 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 	if cfg.ACLConfig != nil && !cfg.ACLConfig.Disable {
 		manager, mc, err := acl.NewBackendLadonManager(&cfg.DBConfig)
 		if err != nil {
+			log.Panicln("backend manager err ", err)
 			return nil, err
 		}
 		managerCleanup = mc
@@ -192,6 +195,7 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 			Subjects:    []string{"system"}, // only system
 		}, manager)
 		if err != nil {
+			log.Panicln("add or update policy err ", err)
 			return nil, err
 		}
 
@@ -208,12 +212,14 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 				if policy.Conditions != nil {
 					conditions, e := conditionsFromConfig(policy.Conditions)
 					if e != nil {
+						log.Panicln("conditionsFromConfig err ", err)
 						return nil, e
 					}
 					ladonPolicy.Conditions = conditions
 				}
 				e := addOrUpdatePolicy(ladonPolicy, manager)
 				if e != nil {
+					log.Panicln("addOrUpdate err ", err)
 					return nil, e
 				}
 			}
@@ -221,6 +227,7 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 
 		aclMiddleware, err := acl.NewACLMiddleware(manager)
 		if err != nil {
+			log.Panicln("aclMddleware err ", err)
 			return nil, err
 		}
 		securityChain.AddMiddleware(aclMiddleware)
