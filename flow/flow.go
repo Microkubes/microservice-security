@@ -2,6 +2,7 @@ package flow
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/Microkubes/microservice-security/jwt"
@@ -244,15 +245,17 @@ func addOrUpdatePolicy(policy ladon.Policy, manager *acl.BackendLadonManager) er
 	if err != nil {
 		return err
 	}
-
+	fmt.Println("after first error")
 	authObj := auth.Auth{
 		Username: "system",
 		UserID:   "system",
 		Roles:    []string{"system"},
 	}
+	fmt.Println("the existing ", existing)
 	if existing != nil {
 		return manager.Update(policy)
 	}
+	fmt.Println("before create with auth ", policy)
 	return manager.CreateWithAuth(policy, &authObj)
 }
 
