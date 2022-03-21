@@ -242,7 +242,7 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 
 func addOrUpdatePolicy(policy ladon.Policy, manager *acl.BackendLadonManager) error {
 	existing, err := manager.Get(policy.GetID())
-	if err != nil {
+	if err != nil && existing != nil {
 		return err
 	}
 	fmt.Println("after first error")
