@@ -226,12 +226,12 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 			}
 		}
 
-		aclMiddleware, err := acl.NewACLMiddleware(manager)
-		if err != nil {
-			log.Panicln("aclMddleware err ", err)
-			return nil, err
-		}
-		securityChain.AddMiddleware(aclMiddleware)
+		// aclMiddleware, err := acl.NewACLMiddleware(manager)
+		// if err != nil {
+		// 	log.Panicln("aclMddleware err ", err)
+		// 	return nil, err
+		// }
+		// securityChain.AddMiddleware(aclMiddleware)
 		configuredSecurity.ACLManager = manager
 	}
 
