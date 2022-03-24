@@ -1,6 +1,7 @@
 package acl
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/ory/ladon"
@@ -47,4 +48,19 @@ func matchPatterns(strVal string, patterns []string) bool {
 		}
 	}
 	return false
+}
+
+// NewCondition creates a new AllowedPatternsCondition with the given name and list of allowed patterns.
+// This function checks if there is a condition factory registered with the requested name. If there isn't one,
+// an error is returned - as the condition could not be deserialized when fetched from the persistence.
+func NewCondition(name string, patterns []string) (ladon.Condition, error) {
+	if _, ok := ladon.ConditionFactories[name]; !ok {
+		return nil, fmt.Errorf("no condition with name %s registered", name)
+	}
+
+	cond := &AllowedPatternsCondition{
+		Name:   name,
+		Values: patterns,
+	}
+	return cond, nil
 }
