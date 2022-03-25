@@ -261,13 +261,13 @@ func addOrUpdatePolicy(policy ladon.Policy, manager *acl.BackendLadonManager) er
 }
 
 func conditionsFromConfig(conds map[string]interface{}) (ladon.Conditions, error) {
+	fmt.Println("conditions i need to work with ", conds)
 	ladonConditions := ladon.Conditions{}
 
 	serConds, err := json.Marshal(conds)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("the conditions about to be unmarshaled ", serConds)
 	err = ladonConditions.UnmarshalJSON(serConds)
 	if err != nil {
 		return nil, err
