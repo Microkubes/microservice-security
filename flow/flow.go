@@ -213,6 +213,7 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 				if policy.Conditions != nil {
 					conditions, e := conditionsFromConfig(policy.Conditions)
 					if e != nil {
+						log.Printf("conditionsFromConfig err %+v\n", err)
 						log.Panicln("conditionsFromConfig err ", err)
 						return nil, e
 					}
