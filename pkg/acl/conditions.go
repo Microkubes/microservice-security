@@ -12,6 +12,36 @@ type AllowedPatternsCondition struct {
 	Values []string
 }
 
+// OwnerCondition is used to implement a special kind of condition for
+// checking the owner of a resource.
+type OwnerCondition struct {
+}
+
+// GetName returns the name of the condition - "OwnerCondition"
+func (o *OwnerCondition) GetName() string {
+	return "OwnerCondition"
+}
+
+// Fulfills checks if the request context contains an owner. If so, it checks if
+// the subject has the same value as the owner.
+// If no owner values is set, then the request is allowed.
+// The value of the owner is retrieved from the request context based on the name of the condition.
+// When setting the condition in a policy, it is associated with a name, for example:
+//   cond := &ladon.DefaultPolicy{
+//     conditions: ladon.Conditions{
+//       "createdBy": &OwnerCondition{},
+//     },
+//   }
+// In this example, the owner value is extracted from the property "createdBy"
+// of the request context.
+func (o *OwnerCondition) Fulfills(value interface{}, req *ladon.Request) bool {
+	if value == nil {
+		// Don't match owner if not set in the request.
+		return true
+	}
+	return value == req.Subject
+}
+
 func (cond *AllowedPatternsCondition) GetName() string {
 	return cond.Name
 }
@@ -48,6 +78,25 @@ func matchPatterns(strVal string, patterns []string) bool {
 		}
 	}
 	return false
+}
+
+// AvailableConditions is the list of names of the available AllowedPatternsCondition conditions.
+// All of these are registered with ladon.
+var AvailableConditions = []string{"RolesCondition", "ScopesCondition", "OrganizationsCondition"}
+
+func init() {
+	// Register custom conditions
+	for _, condName := range AvailableConditions {
+		conditionName := condName
+		ladon.ConditionFactories[condName] = func() ladon.Condition {
+			return &AllowedPatternsCondition{
+				Name: conditionName,
+			}
+		}
+	}
+	ladon.ConditionFactories["OwnerCondition"] = func() ladon.Condition {
+		return &OwnerCondition{}
+	}
 }
 
 // NewCondition creates a new AllowedPatternsCondition with the given name and list of allowed patterns.

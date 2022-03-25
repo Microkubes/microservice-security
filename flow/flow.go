@@ -213,7 +213,6 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 				if policy.Conditions != nil {
 					conditions, e := conditionsFromConfig(policy.Conditions)
 					if e != nil {
-						log.Printf("conditionsFromConfig err %+v\n", e)
 						log.Panicln("conditionsFromConfig err ", e)
 						return nil, e
 					}
@@ -246,17 +245,14 @@ func addOrUpdatePolicy(policy ladon.Policy, manager *acl.BackendLadonManager) er
 	if err != nil && existing != nil {
 		return err
 	}
-	fmt.Println("after first error")
 	authObj := auth.Auth{
 		Username: "system",
 		UserID:   "system",
 		Roles:    []string{"system"},
 	}
-	fmt.Println("the existing ", existing)
 	if existing != nil {
 		return manager.Update(policy)
 	}
-	fmt.Println("before create with auth ", policy)
 	return manager.CreateWithAuth(policy, &authObj)
 }
 

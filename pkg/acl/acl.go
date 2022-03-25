@@ -1,7 +1,6 @@
 package acl
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/Microkubes/microservice-security/auth"
@@ -25,6 +24,7 @@ type Configuration struct {
 // AccessContext is a map string => interface used for additional ACL context data for the ACL check.
 type AccessContext map[string]interface{}
 
+// TODO: write a detailed comment
 func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 	warden := ladon.Ladon{
 		Manager: manager,
@@ -53,7 +53,6 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 			return next(c)
 		}
 	}
-	fmt.Println("the request is allowed")
 	return aclMiddleware, nil
 }
 
