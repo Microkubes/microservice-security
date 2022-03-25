@@ -268,6 +268,8 @@ func conditionsFromConfig(conds map[string]interface{}) (ladon.Conditions, error
 	}
 
 	err = ladonConditions.UnmarshalJSON(serConds)
-
-	return ladonConditions, err
+	if err != nil {
+		return nil, err
+	}
+	return ladonConditions, nil
 }
