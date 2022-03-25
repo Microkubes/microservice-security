@@ -213,8 +213,8 @@ func NewConfiguredSecurityFromConfig(cfg *config.ServiceConfig) (*ConfiguredSecu
 				if policy.Conditions != nil {
 					conditions, e := conditionsFromConfig(policy.Conditions)
 					if e != nil {
-						log.Printf("conditionsFromConfig err %+v\n", err)
-						log.Panicln("conditionsFromConfig err ", err)
+						log.Printf("conditionsFromConfig err %+v\n", e)
+						log.Panicln("conditionsFromConfig err ", e)
 						return nil, e
 					}
 					ladonPolicy.Conditions = conditions
