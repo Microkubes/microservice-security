@@ -42,7 +42,7 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 				"userId":        authObj.UserID,
 				"username":      authObj.Username,
 			}
-			fmt.Println("the request url ", c.Request().URL)
+			fmt.Println("the request url ", c.Request().URL.RequestURI())
 			aclRequest := ladon.Request{
 				Action:   getAction(c.Request()),
 				Resource: c.Request().URL.Path,
@@ -52,6 +52,7 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 			fmt.Println("the acl request ", aclRequest)
 			fmt.Println("the warden manager ", warden.Manager)
 			fmt.Println("the auth obj ", authObj)
+			fmt.Println("the username ", authObj.Username)
 			fmt.Println("the actual manager ", manager)
 			if err := warden.IsAllowed(&aclRequest); err != nil {
 				return c.JSON(403, err)
