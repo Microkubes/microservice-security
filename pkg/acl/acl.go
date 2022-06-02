@@ -7,6 +7,7 @@ import (
 	"github.com/Microkubes/microservice-security/auth"
 	"github.com/Microkubes/microservice-security/chain"
 	"github.com/Microkubes/microservice-tools/config"
+	"github.com/k0kubun/pp/v3"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/ladon"
 )
@@ -32,6 +33,7 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 	}
 	aclMiddleware := func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			pp.Println("the context ", c)
 			authObj := c.Get("userInfo").(*auth.Auth)
 			if authObj == nil {
 				return c.JSON(400, "auth object is missing")
