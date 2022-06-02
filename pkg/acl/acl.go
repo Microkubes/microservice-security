@@ -43,6 +43,7 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 				"username":      authObj.Username,
 			}
 			fmt.Println("the request url ", c.Request().URL.RequestURI())
+			fmt.Println("the request ", c.Request(), " the path ", c.Path())
 			aclRequest := ladon.Request{
 				Action:   getAction(c.Request()),
 				Resource: "/api/extensions/list",
