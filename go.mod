@@ -11,7 +11,6 @@ require (
 	github.com/dimfeld/httptreemux v5.0.1+incompatible // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/gxui v0.0.0-20151028112939-f85e0a97b3a4 // indirect
-	github.com/k0kubun/pp v3.0.1+incompatible // indirect
 	github.com/keitaroinc/goa v1.5.0
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/labstack/echo/v4 v4.6.3

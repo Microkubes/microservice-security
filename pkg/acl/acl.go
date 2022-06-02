@@ -1,6 +1,7 @@
 package acl
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Microkubes/microservice-security/auth"
@@ -47,6 +48,9 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 				Subject:  authObj.Username,
 				Context:  aclContext,
 			}
+			fmt.Println("the acl request ", aclRequest)
+			fmt.Println("the warden manager ", warden)
+			fmt.Println("the actual manager ", manager)
 			if err := warden.IsAllowed(&aclRequest); err != nil {
 				return c.JSON(403, err)
 			}
