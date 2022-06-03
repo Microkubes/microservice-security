@@ -46,6 +46,7 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 			}
 			fmt.Println("the request url ", c.Request().URL.RequestURI())
 			fmt.Println("the request ", c.Request())
+			fmt.Println("the headers ", c.Request().Header)
 			fmt.Println("the remote addr ", c.Request().RemoteAddr, " the path ", c.Path())
 			aclRequest := ladon.Request{
 				Action:   getAction(c.Request()),
