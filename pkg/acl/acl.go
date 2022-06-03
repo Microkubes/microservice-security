@@ -1,6 +1,7 @@
 package acl
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Microkubes/microservice-security/auth"
@@ -41,10 +42,14 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 				"userId":        authObj.UserID,
 				"username":      authObj.Username,
 			}
-			resource := c.Request().Header["X-Envoy-Original-Path"]
+			// resource := c.Request().Header["X-Envoy-Original-Path"]
+			apiPrefix := c.Get("restApiPrefix")
+			serviceName := c.Get("serviveName")
+			resourcePath := fmt.Sprintf("%s/%s%s", apiPrefix, serviceName, c.Path())
+			fmt.Println("the resource path")
 			aclRequest := ladon.Request{
 				Action:   getAction(c.Request()),
-				Resource: resource[0],
+				Resource: resourcePath,
 				Subject:  authObj.Username,
 				Context:  aclContext,
 			}
