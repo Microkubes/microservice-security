@@ -1,7 +1,6 @@
 package acl
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/Microkubes/microservice-security/auth"
@@ -44,21 +43,13 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 				"userId":        authObj.UserID,
 				"username":      authObj.Username,
 			}
-			fmt.Println("the request url ", c.Request().URL.RequestURI())
-			fmt.Println("the request ", c.Request())
-			fmt.Println("the headers ", c.Request().Header)
-			fmt.Println("the remote addr ", c.Request().RemoteAddr, " the path ", c.Path())
+			resource := c.Request().Header["X-Envoy-Original-Path"]
 			aclRequest := ladon.Request{
 				Action:   getAction(c.Request()),
-				Resource: "/api/extensions/list",
+				Resource: resource[0],
 				Subject:  authObj.Username,
 				Context:  aclContext,
 			}
-			fmt.Println("the acl request ", aclRequest)
-			fmt.Println("the warden manager ", warden.Manager)
-			fmt.Println("the auth obj ", authObj)
-			fmt.Println("the username ", authObj.Username)
-			fmt.Println("the actual manager ", manager)
 			if err := warden.IsAllowed(&aclRequest); err != nil {
 				return c.JSON(403, err)
 			}
