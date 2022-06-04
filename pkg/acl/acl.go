@@ -46,7 +46,7 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 			apiPrefix := c.Get("restApiPrefix")
 			serviceName := c.Get("serviveName")
 			resourcePath := fmt.Sprintf("%s/%s%s", apiPrefix, serviceName, c.Path())
-			fmt.Println("the resource path")
+			fmt.Println("the resource path ", resourcePath)
 			aclRequest := ladon.Request{
 				Action:   getAction(c.Request()),
 				Resource: resourcePath,
