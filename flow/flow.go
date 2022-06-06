@@ -2,7 +2,6 @@ package flow
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 
 	"github.com/Microkubes/microservice-security/jwt"
@@ -257,7 +256,6 @@ func addOrUpdatePolicy(policy ladon.Policy, manager *acl.BackendLadonManager) er
 }
 
 func conditionsFromConfig(conds map[string]interface{}) (ladon.Conditions, error) {
-	fmt.Println("conditions i need to work with ", conds)
 	ladonConditions := ladon.Conditions{}
 
 	serConds, err := json.Marshal(conds)

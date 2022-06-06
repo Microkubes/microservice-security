@@ -42,10 +42,7 @@ func NewACLMiddleware(manager ladon.Manager) (chain.EchoMiddleware, error) {
 				"userId":        authObj.UserID,
 				"username":      authObj.Username,
 			}
-			apiPrefix := c.Get("restApiPrefix")
-			serviceName := c.Get("serviceName")
-			resourcePath := fmt.Sprintf("/%s/%s%s", apiPrefix, serviceName, c.Path())
-			fmt.Println("the resource path ", resourcePath)
+			resourcePath := fmt.Sprintf("/%s/%s%s", c.Get("restApiPrefix"), c.Get("serviceName"), c.Path())
 			aclRequest := ladon.Request{
 				Action:   getAction(c.Request()),
 				Resource: resourcePath,
